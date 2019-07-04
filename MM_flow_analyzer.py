@@ -487,10 +487,13 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength):
             print("Actual frame interval is: {:.2f} s".format(Ch0.getActualFrameIntevals_ms().mean()/1000))
             if not Ch0.doFrameIntervalSanityCheck():
                 print("Replacing intended interval with actual!")
-                finterval_s = round(Ch0.getActualFrameIntevals_ms().mean() / 1000, 2)
+                finterval_ms = Ch0.getActualFrameIntevals_ms().mean()
+                finterval_s = round(finterval_ms / 1000, 2)
                 frames_per_min = round(60 / finterval_s, 2)
                 tunit = 's'
                 Ch0.scaler = Ch0.pxSize_um * frames_per_min  # um/px * frames/min * px/frame = um/min
+                Ch0.finterval_ms = finterval_ms
+
                 print(
                     "Using dimensions: frame interval {:.2f}s, {:.2f} frames/min, pixel size: {:.2f} um ".format(
                         finterval_s, frames_per_min, Ch0.pxSize_um))
