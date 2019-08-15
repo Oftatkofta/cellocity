@@ -17,6 +17,7 @@ class Channel(object):
         """
         :param chIndex: (int) index of channel to create
         :param tiffFile: (TiffFile) to extract channel from
+        :param name: (str) name of channel
         :param slice: (int) slice to extract, defaults to 0
         """
         self.chIndex = chIndex
@@ -249,12 +250,21 @@ class FarenbackAnalyzer(Analyzer):
 
     def _getScaler(self):
         """
-        Calculates constant to scale px/frame to um/min
+        Calculates constant to scale px/frame to um/min in the unit um*frame/px*min
 
         um/px * frames/min * px/frame = um/min
 
         :return: (float) scaler
         """
+        if not self.channel.doFrameIntervalSanityCheck():
+            print("Replacing intended interval with actual!")
+            finterval_ms = self.channel.getActualFrameIntevals_ms().mean()
+            finterval_s = round(finterval_ms / 1000, 2)
+            frames_per_min = round(60 / finterval_s, 2)
+            tunit = 's'
+            self.channel.scaler = self.channel.pxSize_um * frames_per_min  # um/px * frames/min * px/frame = um/min
+            Ch0.finterval_ms = finterval_ms
+
         finterval_s = self.channel.finterval_ms / 1000
         frames_per_min = finterval_s / 60
 
@@ -478,7 +488,7 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength):
 
             Ch0 = Channel(0, tif, name=lab + "_Ch1")
             print("Elapsed for file load and Channel creation {:.2f} s.".format(time.time() - t1))
-            finterval_s = round(Ch0.finterval_ms / 1000, 1)
+            finterval_s = round(Ch0.finterval_ms / 1000, 2)
             frames_per_min = round(60 / finterval_s, 2)
             tunit = 's'
             print(
