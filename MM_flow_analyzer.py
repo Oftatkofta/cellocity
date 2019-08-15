@@ -261,9 +261,9 @@ class FarenbackAnalyzer(Analyzer):
             finterval_ms = self.channel.getActualFrameIntevals_ms().mean()
             finterval_s = round(finterval_ms / 1000, 2)
             frames_per_min = round(60 / finterval_s, 2)
-            tunit = 's'
-            self.channel.scaler = self.channel.pxSize_um * frames_per_min  # um/px * frames/min * px/frame = um/min
-            Ch0.finterval_ms = finterval_ms
+            self.channel.finterval_ms = finterval_ms
+
+            return self.channel.pxSize_um * frames_per_min  # um/px * frames/min * px/frame = um/min
 
         finterval_s = self.channel.finterval_ms / 1000
         frames_per_min = finterval_s / 60
