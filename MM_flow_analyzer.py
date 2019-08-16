@@ -28,9 +28,9 @@ class Channel(object):
         self.pxSize_um, self.finterval_ms = self._read_px_size_and_finteval() #finterval from settings, not actual
         self.elapsedTimes_ms = [] #_page_extractor method populates this
         self.pages = self._page_extractor()
-        self.array = None # getArray populates this when called
+        self.array = np.empty((0)) # getArray populates this when called
         self.actualFrameIntervals_ms = None #getActualFrameIntervals_ms populates this when called
-        self.medianArray = None # getTemporalMedianFilterArray populates when called
+        self.medianArray = np.empty((0)) # getTemporalMedianFilterArray populates when called
         self.frameSamplingInterval = None # getTemporalMedianFilterArray populates when called
 
 
@@ -107,7 +107,7 @@ class Channel(object):
 
     def getArray(self):
 
-        if (self.array != None):
+        if len(self.array) != 0:
 
             return self.array
 
@@ -135,11 +135,11 @@ class Channel(object):
         :param arr:
             (3d numpy array) with a shape of (t, y, x)
         :param stopFrame:
-            (int) Last frame to analyze, defalults to analyzing all frames if None
+            (int) Last frame to analyze, defaults to analyzing all frames if None
         :param startFrame:
             (int) First frame to analyze
         :param frameSamplingInterval:
-            (int) do median projection every n frames
+            (int) do median projection every N frames
         :param recalculate:
             (bool) Should the median projection be recalculated?
 
@@ -147,12 +147,8 @@ class Channel(object):
             An Nupy array of the type float32
 
         """
-        try:
-            if (self.medianArray != None) and not recalculate:
 
-                return self.medianArray
-        except ValueError: #np arrays are ambigous if checked for None
-
+        if len(self.medianArray) != 0:
             if not recalculate:
 
                 return self.medianArray
@@ -169,20 +165,21 @@ class Channel(object):
 
         self.frameSamplingInterval = frameSamplingInterval
         arr = self.getArray()
-        # nr_out_frames = n_in-(samplingInterval-1), stopFrame is an index so 1 has to be added to get the nr of frames
+        # nr_out_frames = n_in-(samplingInterval-1)
         nr_outframes = (stopFrame - startFrame) - (frameSamplingInterval - 1)
 
         outshape = (nr_outframes, arr.shape[1], arr.shape[2])
 
         self.medianArray = np.ndarray(outshape, dtype=np.float32)
-        fr = np.ndarray((arr.shape[1], arr.shape[2]), dtype=np.float32)
 
         outframe = 0
 
         for inframe in range(startFrame, stopFrame-frameSamplingInterval+1):
 
             # median of frames n1,n2,n3...
-            self.medianArray[outframe] = np.median(arr[inframe:inframe + frameSamplingInterval], axis=0, out=fr)
+            frame_to_store = np.median(arr[inframe:inframe + frameSamplingInterval], axis=0).astype(np.float32)
+
+            self.medianArray[outframe] = frame_to_store
             outframe += 1
 
         return self.medianArray
@@ -213,7 +210,7 @@ class Channel(object):
         return self.finterval_ms
 
     def doFrameIntervalSanityCheck(self, maxDiff=0.01):
-        #Checks if the intended frame interval matches the actual within maxDiff
+        #Checks if the intended frame interval matches the actual within maxDiff defaults to allowing 1% difference
 
         if len(self.pages) == 1:
             return None
@@ -256,7 +253,8 @@ class FarenbackAnalyzer(Analyzer):
 
         :return: (float) scaler
         """
-        if not self.channel.doFrameIntervalSanityCheck():
+
+        if not self.channel.doFrameIntervalSanityCheck(): #Are actual and intended frame intervals within 1%?
             print("Replacing intended interval with actual!")
             finterval_ms = self.channel.getActualFrameIntevals_ms().mean()
             finterval_s = round(finterval_ms / 1000, 2)
@@ -266,7 +264,7 @@ class FarenbackAnalyzer(Analyzer):
             return self.channel.pxSize_um * frames_per_min  # um/px * frames/min * px/frame = um/min
 
         finterval_s = self.channel.finterval_ms / 1000
-        frames_per_min = finterval_s / 60
+        frames_per_min = round(60 / finterval_s, 2)
 
         return self.channel.pxSize_um * frames_per_min
 
@@ -276,7 +274,8 @@ class FarenbackAnalyzer(Analyzer):
         """
         Calculates Farenback flow for a single channel time lapse
 
-        returns numpy array of dtype int32 with flow in px/frame
+        returns numpy array of dtype int32 with flow in the unit px/frame
+        Output values need to be multiplied by a scaler to be converted to speeds
         """
 
         arr = self.channel.getTemporalMedianFilterArray()

@@ -11,15 +11,13 @@ some massaging of the Channel objects will have to be done
 
 indir = r"C:\Users\Jens\Microscopy\FrankenScope2\_Pilar\DIC_truth"
 outdir = r"C:\Users\Jens\Microscopy\FrankenScope2\_Pilar\DIC_truth\out2"
+indir = r"C:\Users\Jens\Microscopy\FrankenScope2\_Pilar\EXP-19-BP4294\plate3_Mss109_to15min_every20sec_1_MMStack_A_a.ome.tif"
+outdir = r"C:\Users\Jens\Microscopy\FrankenScope2\_Pilar\EXP-19-BP4294\plate3_Mss109_to15min_every20sec_1_MMStack_A_a.ome.tif\out"
+
 filelist = []
 for fname in os.listdir(indir):
     if os.path.isfile(os.path.join(indir, fname)):
         filelist.append(os.path.join(indir, fname))
-
-def makeFakeChannel(tif, chidx, desiredinterval):
-    #creates a fake channel object from a stack to emulate time lapse images
-    Ch0 = Channel(chidx, tif, name=lab + "_Ch1")
-    return None
 
 flowkwargs = {"step": 15, "scale": 20, "line_thicknes": 2}
 scalebarFlag = True
@@ -55,15 +53,18 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength):
             Analysis_Ch0.doFarenbackFlow()
 
             print("flow finished, calculating speeds...")
-            Analysis_Ch0.doFlowsToSpeed()
-
-            arr = np.average(Analysis_Ch0.speeds, axis=(1, 2))
-            plt.plot(arr, label=lab[20:-10]+"-"+str(Ch0.getActualFrameIntevals_ms().mean()))
-            print("Elapsed for file {:.2f} s, now drawing flow...".format(time.time() - t1))
+            Analysis_Ch0.doFlowsToSpeed(doHist=True, nbins=100, hist_range=(0,3))
+            bins = Analysis_Ch0.histograms[1]
+            width = 0.7 * (bins[1] - bins[0])
+            center = (bins[:-1] + bins[1:]) / 2
+            for i in range(len(Analysis_Ch0.histograms[0])):
+                hist = Analysis_Ch0.histograms[0][i]
+                plt.bar(center, hist, align='center', width=width)
+                savename = Analysis_Ch0.channel.name+"_"+str(i)
+                plt.savefig(os.path.join(outdir, savename))
+                plt.close()
 
             print("File done!")
-    plt.legend()
-    plt.show()
     return True
 
-analyzeFiles(filelist, outdir, flowkwargs, scalebarFlag, scalebarLength)
+analyzeFiles(filelist[:1], outdir, flowkwargs, scalebarFlag, scalebarLength)
