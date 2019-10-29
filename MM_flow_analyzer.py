@@ -9,8 +9,8 @@ import pandas as pd
 
 class Channel(object):
     """
-    Class to keep track of one channel from a Micromanager OME-TIFF. Only handles a single slice.
-    Acts as a shallow copy of the channels TiffPages from a TiffFile until a nupy array is generated.
+    Class to keep track of one channel from a Micromanager OME-TIFF or a ImageJ hyperstack. Only handles a single slice.
+    Acts as a shallow copy of the channels TiffPages from a TiffFile until a Nupy array is generated.
     Stores the Numpy array, median projection, and analysis
     """
     def __init__(self, chIndex, tiffFile, name, sliceIndex=0):
@@ -25,6 +25,7 @@ class Channel(object):
         self.tif = tiffFile
         self.name = name
         self.tif_mm_metadata = tiffFile.micromanager_metadata
+        self.tif_ij_metadata = tifffile.imagej_metadata
         self.pxSize_um, self.finterval_ms = self._read_px_size_and_finteval() #finterval from settings, not actual
         self.elapsedTimes_ms = [] #_page_extractor method populates this
         self.pages = self._page_extractor()
@@ -38,23 +39,36 @@ class Channel(object):
         """
         :return: (list) Tif-Page objects corresponding to the chosen slice and channel
         """
-
         out = []
-        sliceMap = self.tif_mm_metadata["IndexMap"]["Slice"]
-        channelMap = self.tif_mm_metadata["IndexMap"]["Channel"]
+        if self.tif.is_micromanager:
 
-        for i in range(len(self.tif.pages)):
-            if (sliceMap[i] == self.sliceIdx) and (channelMap[i] == self.chIndex):
-                page = self.tif.pages[i]
-                out.append(page)
-                self.elapsedTimes_ms.append(page.tags["MicroManagerMetadata"].value["ElapsedTime-ms"])
+            sliceMap = self.tif_mm_metadata["IndexMap"]["Slice"]
+            channelMap = self.tif_mm_metadata["IndexMap"]["Channel"]
 
-        return out
+            for i in range(len(self.tif.pages)):
+                if (sliceMap[i] == self.sliceIdx) and (channelMap[i] == self.chIndex):
+                    page = self.tif.pages[i]
+                    out.append(page)
+                    self.elapsedTimes_ms.append(page.tags["MicroManagerMetadata"].value["ElapsedTime-ms"])
+
+            return out
+        if self.tif.is_imagej:
+
+            sliceMap = self.tif_mm_metadata["IndexMap"]["Slice"]
+            channelMap = self.tif_mm_metadata["IndexMap"]["Channel"]
+
+            for i in range(len(self.tif.pages)):
+                if (sliceMap[i] == self.sliceIdx) and (channelMap[i] == self.chIndex):
+                    page = self.tif.pages[i]
+                    out.append(page)
+                    self.elapsedTimes_ms.append(page.tags["MicroManagerMetadata"].value["ElapsedTime-ms"])
+
+            return out
 
     def _read_px_size_and_finteval(self):
         """
-        Determines which version of MM that was used to acquire the data.
-        versions 1.4 and 2.0-gamma, share Metadata structure, but 2.0.0-beta is slightly different
+        Determines which version of MM that was used to acquire the data, or if it is an ImageJ file.
+        MM versions 1.4 and 2.0-gamma, share Metadata structure, but 2.0.0-beta is slightly different
         in where the frame interval and pixel sizes can be read from. In 2.0-beta the
         frame interval is read from tif.micromanager_metadata['Summary']['WaitInterval'],
         and in 1.4/2.0-gamma it is read from tif.micromanager_metadata['Summary']['Interval_ms']
@@ -73,29 +87,66 @@ class Channel(object):
             :return:
             (tuple) (pixel_size_um, frame_interval)
         """
-        one4_regex = re.compile("1\.4\.[\d]")  # matches 1.4.d
-        gamma_regex = re.compile("gamma")
-        beta_regex = re.compile("beta")
+        if self.tif.is_micromanager:
+            # if the file is a MM file this branch determines which version
+            one4_regex = re.compile("1\.4\.[\d]")  # matches 1.4.d
+            gamma_regex = re.compile("gamma")
+            beta_regex = re.compile("beta")
 
-        version = self.tif_mm_metadata["Summary"]["MicroManagerVersion"]
+            version = self.tif_mm_metadata["Summary"]["MicroManagerVersion"]
 
-        if (re.search(beta_regex, version) != None):
-            finterval_ms = self.tif_mm_metadata['Summary']['WaitInterval']
-            px_size_um = self.tif_mm_metadata['PixelSize_um']
+            if (re.search(beta_regex, version) != None):
+                finterval_ms = self.tif_mm_metadata['Summary']['WaitInterval']
+                px_size_um = self.tif_mm_metadata['PixelSize_um']
+
+                return px_size_um, finterval_ms
+
+            elif (re.search(one4_regex, version) != None):
+                finterval_ms = self.tif_mm_metadata['Summary']['Interval_ms']
+                px_size_um = self.tif_mm_metadata['PixelSizeUm']
+
+                return px_size_um, finterval_ms
+
+            elif (re.search(gamma_regex, version) != None):
+                finterval_ms = self.tif_mm_metadata['Summary']['Interval_ms']
+                px_size_um = self.tif_mm_metadata['PixelSizeUm']
+
+                return px_size_um, finterval_ms
+
+        elif self.tif.is_imagej:
+            #this is not as clean due to the undocumated nature of imageJ metadata
+
+            #time
+            finterval = self.tif.imagej_metadata.get('finterval', 1)
+            tunit = self.tif.imagej_metadata.get('tunit', 's')
+
+            if (tunit == 'min') or (tunit == 'm'):
+                finterval_ms = 60 * 1000 * finterval
+
+            elif (tunit == 'hour') or (tunit == 'h') or (tunit == 'hours'):
+                finterval_ms = 60 * 60 * 1000 * finterval
+
+            elif (tunit == 'sec') or (tunit == 's') or (tunit == 'seconds'):
+                finterval_ms = 1000 * finterval
+
+            #space
+            divisor, dividend = tif.pages[0].tags['XResolution'].value
+            px_size = float(divisor/dividend)
+            sz_unit = tif.imagej_metadata.get('unit', '\\u00B5m')
+
+            if (sz_unit == 'cm'):
+                px_size_um = px_size * 10 * 1000 #10 mm/cm * 1000 um/mm
+
+            elif (sz_unit == 'cm'):
+                px_size_um = px_size * 1000  # 1000 um/mm
+
+            elif (sz_unit == '\\u00B5m') or (sz_unit == 'um') or (sz_unit == 'micrometer'):
+                px_size_um = px_size
 
             return px_size_um, finterval_ms
 
-        elif (re.search(one4_regex, version) != None):
-            finterval_ms = self.tif_mm_metadata['Summary']['Interval_ms']
-            px_size_um = self.tif_mm_metadata['PixelSizeUm']
-
-            return px_size_um, finterval_ms
-
-        elif (re.search(gamma_regex, version) != None):
-            finterval_ms = self.tif_mm_metadata['Summary']['Interval_ms']
-            px_size_um = self.tif_mm_metadata['PixelSizeUm']
-
-            return px_size_um, finterval_ms
+        else:
+            return 1, 1 #defaults to pixels/frame
 
     def getPages(self):
 
@@ -469,6 +520,10 @@ def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
     return image_equalized.reshape(image_stack.shape).astype('uint8')
 
 
+def read_micromanager(tif):
+    """returns metadata from a micromanager file"""
+
+
 def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength):
     """
     Automatically analyzes tifffiles annd saves ouput in outfolder. If input has two channels, analysis is run on
@@ -564,6 +619,10 @@ if __name__ == '__main__':
     fs_beta = r"C:\Users\Jens\Microscopy\FrankenScope2\_Pilar\Multi channel\plate3_Mss109_to15min_every20sec_1_MMStack_A_b.ome.tif"
     fs_beta2 = r"C:\Users\Jens\Microscopy\FrankenScope2\_Pilar\Multi channel\raw_STm infection_10x__1_MMStack_MOI2.ome.tif"
     fs_onefour = r"C:\Users\Jens\Downloads\SG_Mitotracker-green_Lysotracker-red_cellROX-deepRed_post_1_MMStack_3-Pos_001_001.ome.tif"
+    imageJ = r"C:\Users\Jens\Desktop\laminin_2_MMStack_Control_2-5E4.ome.tif"
+    ij2 = r"C:\Users\Jens\Desktop\MC_1.tif"
+    hs = r"C:\Users\Jens\Desktop\HyperStack_345.tif"
+
 
     # filelist = [gamma, beta, onefour, fs_beta]
     filelist = [fs_beta, fs_beta2]
