@@ -24,7 +24,6 @@ class Channel(object):
         self.sliceIdx = sliceIndex
         self.tif = tiffFile
         self.name = name
-        self.tif_mm_metadata = tiffFile.micromanager_metadata
         self.tif_ij_metadata = tifffile.imagej_metadata
         self.pxSize_um, self.finterval_ms = self._read_px_size_and_finteval() #finterval from settings, not actual
         self.elapsedTimes_ms = [] #_page_extractor method populates this
@@ -42,28 +41,54 @@ class Channel(object):
         out = []
         if self.tif.is_micromanager:
 
-            sliceMap = self.tif_mm_metadata["IndexMap"]["Slice"]
-            channelMap = self.tif_mm_metadata["IndexMap"]["Channel"]
+            sliceMap = self.tif.micromanager_metadata["IndexMap"]["Slice"]
+            channelMap = self.tif.micromanager_metadata["IndexMap"]["Channel"]
 
-            for i in range(len(self.tif.pages)):
-                if (sliceMap[i] == self.sliceIdx) and (channelMap[i] == self.chIndex):
-                    page = self.tif.pages[i]
-                    out.append(page)
+        elif self.tif.is_imagej:
+            elapsed = 0
+            indexMap = self._ij_pagemapper()
+            sliceMap = indexMap[1]
+            channelMap = indexMap[0]
+
+        for i in range(len(self.tif.pages)):
+
+            if (sliceMap[i] == self.sliceIdx) and (channelMap[i] == self.chIndex):
+                page = self.tif.pages[i]
+                out.append(page)
+                if self.tif.is_micromanager:
                     self.elapsedTimes_ms.append(page.tags["MicroManagerMetadata"].value["ElapsedTime-ms"])
+                else:
+                    self.elapsedTimes_ms.append(elapsed)
+                    elapsed += self.finterval_ms
+        return out
 
-            return out
-        if self.tif.is_imagej:
+    def _ij_pagemapper(self):
 
-            sliceMap = self.tif_mm_metadata["IndexMap"]["Slice"]
-            channelMap = self.tif_mm_metadata["IndexMap"]["Channel"]
+        """
+        Helper function to make maps for sorting IJ Pages in to slices and channels
 
-            for i in range(len(self.tif.pages)):
-                if (sliceMap[i] == self.sliceIdx) and (channelMap[i] == self.chIndex):
-                    page = self.tif.pages[i]
-                    out.append(page)
-                    self.elapsedTimes_ms.append(page.tags["MicroManagerMetadata"].value["ElapsedTime-ms"])
+        :returns: (channelMap, sliceMap, frameMap) which are lists of integers describing which channel,
+        slice, frame each Tiff-Page belongs to. Indexes start at 0.
+        """
+        nChannels = self.tif.imagej_metadata.get('channels', 1)
+        nSlices = self.tif.imagej_metadata.get('slices', 1)
+        nFrames = self.tif.imagej_metadata.get('frames', None)
 
-            return out
+        channelMap = []
+        sliceMap = []
+        frameMap = []
+
+        for i in range(len(self.tif.pages)):
+            chIdx = (i % nChannels)
+            slIdx = (i // nChannels) % nSlices
+            frIdx = ( i // (nChannels*nSlices))
+
+
+            channelMap.append(int(chIdx))
+            sliceMap.append(int(slIdx))
+            frameMap.append(int(frIdx))
+
+        return channelMap, sliceMap, frameMap
 
     def _read_px_size_and_finteval(self):
         """
@@ -93,23 +118,23 @@ class Channel(object):
             gamma_regex = re.compile("gamma")
             beta_regex = re.compile("beta")
 
-            version = self.tif_mm_metadata["Summary"]["MicroManagerVersion"]
+            version = self.tif.micromanager_metadata["Summary"]["MicroManagerVersion"]
 
             if (re.search(beta_regex, version) != None):
-                finterval_ms = self.tif_mm_metadata['Summary']['WaitInterval']
-                px_size_um = self.tif_mm_metadata['PixelSize_um']
+                finterval_ms = self.tif.micromanager_metadata['Summary']['WaitInterval']
+                px_size_um = self.tif.micromanager_metadata['PixelSize_um']
 
                 return px_size_um, finterval_ms
 
             elif (re.search(one4_regex, version) != None):
-                finterval_ms = self.tif_mm_metadata['Summary']['Interval_ms']
-                px_size_um = self.tif_mm_metadata['PixelSizeUm']
+                finterval_ms = self.tif.micromanager_metadata['Summary']['Interval_ms']
+                px_size_um = self.tif.micromanager_metadata['PixelSizeUm']
 
                 return px_size_um, finterval_ms
 
             elif (re.search(gamma_regex, version) != None):
-                finterval_ms = self.tif_mm_metadata['Summary']['Interval_ms']
-                px_size_um = self.tif_mm_metadata['PixelSizeUm']
+                finterval_ms = self.tif.micromanager_metadata['Summary']['Interval_ms']
+                px_size_um = self.tif.micromanager_metadata['PixelSizeUm']
 
                 return px_size_um, finterval_ms
 
@@ -130,9 +155,9 @@ class Channel(object):
                 finterval_ms = 1000 * finterval
 
             #space
-            divisor, dividend = tif.pages[0].tags['XResolution'].value
-            px_size = float(divisor/dividend)
-            sz_unit = tif.imagej_metadata.get('unit', '\\u00B5m')
+            divisor, dividend = self.tif.pages[0].tags['XResolution'].value
+            px_size = float(dividend/divisor)
+            sz_unit = self.tif.imagej_metadata.get('unit', '\\u00B5m')
 
             if (sz_unit == 'cm'):
                 px_size_um = px_size * 10 * 1000 #10 mm/cm * 1000 um/mm
@@ -164,8 +189,8 @@ class Channel(object):
 
         else:
             outshape = (len(self.pages),
-                        self.tif_mm_metadata['Summary']["Width"],
-                        self.tif_mm_metadata['Summary']["Height"])
+                        self.pages[0].shape[0],
+                        self.pages[0].shape[1])
 
             outType = self.pages[0].asarray().dtype
 
@@ -238,7 +263,7 @@ class Channel(object):
 
     def getActualFrameIntevals_ms(self):
         # the intervals between frames in ms as a 1D numpy array
-        # returns None if only one frame exists
+        # returns None if only one frame exists or if the file is not from MicroManager
 
         if (self.actualFrameIntervals_ms != None):
 
@@ -524,23 +549,32 @@ def read_micromanager(tif):
     """returns metadata from a micromanager file"""
 
 
-def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength):
+def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, chToAnalyze = 0):
     """
     Automatically analyzes tifffiles annd saves ouput in outfolder. If input has two channels, analysis is run on
-    channel index 1
+    channel index 1 by default, but can be changed.
     :param tif: Tifffile objekt
     :return:
     """
     for fname in fnamelist:
 
         with tifffile.TiffFile(fname, multifile=False) as tif:
-            lab = os.path.split(fname)[1][:-8]
+
+            if tif.is_micromanager:
+                lab = os.path.split(fname)[1][:-8]
+            else:
+                lab = os.path.split(fname)[1][:-4]
             print("Working on: {} as {}".format(fname, lab))
             t1 = time.time()
             ij_metadata = tif.imagej_metadata
-            n_channels = int(tif.micromanager_metadata['Summary']['Channels'])
 
-            Ch0 = Channel(0, tif, name=lab + "_Ch1")
+            if tif.is_micromanager:
+                n_channels = int(tif.micromanager_metadata['Summary']['Channels'])
+            else:
+                n_channels = int(ij_metadata['channels'])
+
+            Ch0 = Channel(chToAnalyze, tif, name=lab + "_Ch"+str(chToAnalyze+1))
+
             print("Elapsed for file load and Channel creation {:.2f} s.".format(time.time() - t1))
             finterval_s = round(Ch0.finterval_ms / 1000, 2)
             frames_per_min = round(60 / finterval_s, 2)
@@ -549,6 +583,7 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength):
                 "Intended dimensions: frame interval {:.2f}s, {:.2f} frames/min, pixel size: {:.2f} um ".format(finterval_s, frames_per_min, Ch0.pxSize_um))
 
             print("Actual frame interval is: {:.2f} s".format(Ch0.getActualFrameIntevals_ms().mean()/1000))
+
             if not Ch0.doFrameIntervalSanityCheck():
                 print("Replacing intended interval with actual!")
                 finterval_ms = Ch0.getActualFrameIntevals_ms().mean()
@@ -558,15 +593,15 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength):
                 Ch0.scaler = Ch0.pxSize_um * frames_per_min  # um/px * frames/min * px/frame = um/min
                 Ch0.finterval_ms = finterval_ms
 
-                print(
+            print(
                     "Using dimensions: frame interval {:.2f}s, {:.2f} frames/min, pixel size: {:.2f} um ".format(
                         finterval_s, frames_per_min, Ch0.pxSize_um))
+
 
             print("Start median filter of Channel 1...")
             Ch0.getTemporalMedianFilterArray()
             print("Elapsed for file {:.2f} s, now calculating Channel 1 flow...".format(time.time() - t1))
             Analysis_Ch0 = FarenbackAnalyzer(Ch0)
-
             Analysis_Ch0.doFarenbackFlow()
 
             print("flow finished, calculating speeds...")
@@ -580,13 +615,17 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength):
             Analysis_Ch0.rehapeDrawnFramesTo6d()
 
             ij_metadatasave = {'unit': 'um', 'finterval': finterval_s,
-                               'tunit': tunit, 'Info': ij_metadata['Info'], 'frames': Analysis_Ch0.flows.shape[0],
+                               'tunit': tunit, 'Info': ij_metadata.get('Info', "None"), 'frames': Analysis_Ch0.flows.shape[0],
                                'slices': 1, 'channels': n_channels}
 
             if n_channels == 2:
                 print("Loading Channel 2")
-                Ch1 = Channel(1, tif, name=lab + "_Ch2")
-                print("Start median filter of Channel 2...")
+                if chToAnalyze == 0:
+                    Ch1 = Channel(1, tif, name=lab + "_Ch2")
+                else:
+                    Ch1 = Channel(0, tif, name=lab + "_Ch1")
+
+                print("Start median filter of the other channel ...")
                 Ch1.getTemporalMedianFilterArray()
                 Ch1.medianArray = normalization_to_8bit(Ch1.medianArray, lowPcClip=10, highPcClip=0)
                 Ch1.rehapeMedianFramesTo6d()
@@ -594,7 +633,6 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength):
                 savename = os.path.join(outdir, lab + "_2Chan_flow.tif")
                 #print(Analysis_Ch0.drawnFrames.shape, Ch1.medianArray[:stopframe-3].shape)
                 arr_to_save = np.concatenate((Analysis_Ch0.drawnFrames, Ch1.medianArray[:-1]), axis=2)
-
 
 
             else:
@@ -625,9 +663,9 @@ if __name__ == '__main__':
 
 
     # filelist = [gamma, beta, onefour, fs_beta]
-    filelist = [fs_beta, fs_beta2]
+    filelist = [imageJ, hs]
 
-    outdir = r"C:\Users\Jens\Microscopy\FrankenScope2\_Pilar\Multi channel"
+    outdir = r"C:\Users\Jens\Desktop\temp"
 
     flowkwargs = {"step": 15, "scale": 20, "line_thicknes": 2}
     scalebarFlag = True
