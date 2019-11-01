@@ -26,7 +26,7 @@ class ErrorEmittingStream(QObject):
 class AnalysisThread(QThread):
     # Runs the analysis in a separate thread in order not to freeze the GUI
 
-    def __init__(self, fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength):
+    def __init__(self, fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, channel, unit):
         QThread.__init__(self)
 
         self.fnamelist = fnamelist
@@ -34,6 +34,8 @@ class AnalysisThread(QThread):
         self.outdir = outdir
         self.scalebarFlag = scalebarFlag
         self.scalebarLength = scalebarLength
+        self.channel = channel - 1
+        self.unit = unit
 
     def __del__(self):
         self.quit()
@@ -41,7 +43,8 @@ class AnalysisThread(QThread):
     def run(self):
 
         MM_flow_analyzer.analyzeFiles(self.fnamelist, self.outdir, self.flowkwargs,
-                                      self.scalebarFlag, self.scalebarLength)
+                                      self.scalebarFlag, self.scalebarLength,
+                                      self.channel, self.unit)
 
 
 class AppWindow(QDialog, Ui_Main):
@@ -59,15 +62,16 @@ class AppWindow(QDialog, Ui_Main):
         #self.btn_cancel.clicked().connect(self.close)
 
         # Installs custom output streams
-        sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
-        sys.stderr = ErrorEmittingStream(textWritten=self.errorOutputWritten)
+        #sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
+        #sys.stderr = ErrorEmittingStream(textWritten=self.errorOutputWritten)
 
         self.show()
 
     def __del__(self):
         # Restore sys.stdout and sys.stderr
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
+        pass
+        #sys.stdout = sys.__stdout__
+        #sys.stderr = sys.__stderr__
 
     def in_folder_select(self):
 
@@ -76,7 +80,7 @@ class AppWindow(QDialog, Ui_Main):
         if directory:
             self.listWidget_filesToAnalyze.clear()
             for fname in os.listdir(directory):
-                if fname.endswith("ome.tif"):
+                if fname.endswith(".tif"):
                     self.infiles.append(os.path.join(directory, fname))
                     self.listWidget_filesToAnalyze.addItem(fname)
 
@@ -91,10 +95,14 @@ class AppWindow(QDialog, Ui_Main):
     def _analyzeFiles(self):
 
         self.separateThread = AnalysisThread(self.infiles, self.outdir,
-                                             self._getFlowkwargs(), self._getScaleBarFlag(), self._getScaleBarLength())
+                                             self._getFlowkwargs(), self._getScaleBarFlag(), self._getScaleBarLength(),
+                                             self._getChannel(), self._getUnit())
 
         self.separateThread.start()
 
+    def _getChannel(self):
+
+        return (int(self.channel_selectBox.value()))
 
     def _getFlowkwargs(self):
 
@@ -113,6 +121,10 @@ class AppWindow(QDialog, Ui_Main):
     def _getScaleBarLength(self):
 
         return self.scalebarLength_box.value()
+
+    def _getUnit(self):
+
+        return str(self.output_unitBox.currentText())
 
     def normalOutputWritten(self, text):
         """Append text to the QTextEdit."""

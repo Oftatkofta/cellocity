@@ -304,27 +304,29 @@ class Channel(object):
 
 class Analyzer(object):
 
-    def __init__(self, channel):
+    def __init__(self, channel, unit):
 
         self.channel = channel
         self.progress = 0 #0-100 for pyQt5 progressbar
+        self.unit = unit
 
 class FarenbackAnalyzer(Analyzer):
 
-    def __init__(self, channel):
-        super().__init__(channel)
+    def __init__(self, channel, unit):
+        super().__init__(channel, unit)
 
         self.flows = None # (t, x, y, uv) numpy array
         self.speeds = None # (t ,x, y) 3D numpy-array
         self.avg_speeds = None # 1D numpy array of frame average speeds
         self.histograms = None # populated by doFlowsToAvgSpeed if the doHist flag True
         self.drawnFrames = None
-        self.scaler = self._getScaler() #value to multiply vector lengths by to get um/min from px/frame
+        self.scaler = self._getScaler() #value to multiply vector lengths by to get selected unit from px/frame
 
     def _getScaler(self):
         """
-        Calculates constant to scale px/frame to um/min in the unit um*frame/px*min
+        Calculates constant to scale px/frame to um/min, um/h or um/s in the unit um*frame/px*(min/h/s)
 
+        example:
         um/px * frames/min * px/frame = um/min
 
         :return: (float) scaler
@@ -342,8 +344,18 @@ class FarenbackAnalyzer(Analyzer):
         finterval_s = self.channel.finterval_ms / 1000
         frames_per_min = round(60 / finterval_s, 2)
 
-        return self.channel.pxSize_um * frames_per_min
+        if self.unit == "um/min":
 
+            return self.channel.pxSize_um * frames_per_min
+
+        if self.unit == "um/h":
+
+            frames_per_h = round(60*60 / finterval_s, 2)
+            return self.channel.pxSize_um * frames_per_h
+
+        if self.unit == "um/s":
+
+            return self.channel.pxSize_um * finterval_s
 
 
     def doFarenbackFlow(self, pyr_scale=0.5, levels=3, winsize=15, iterations=3, poly_n=5, poly_sigma=1.2, flags=0):
@@ -526,7 +538,7 @@ class FarenbackAnalyzer(Analyzer):
 
         timepoints_abs = np.arange(fr_interval-1, arr.shape[0] + fr_interval-1, dtype='float32') * self.channel.finterval_ms/1000
 
-        df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_frame_flow_um_per_min"])
+        df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_frame_flow_"+self.unit])
         df.index.name = "Time(s)"
         saveme = os.path.join(outdir, self.channel.name + "_speeds.csv")
         df.to_csv(saveme)
@@ -549,7 +561,7 @@ def read_micromanager(tif):
     """returns metadata from a micromanager file"""
 
 
-def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, chToAnalyze = 0):
+def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, chToAnalyze = 0, unit = "um/min"):
     """
     Automatically analyzes tifffiles annd saves ouput in outfolder. If input has two channels, analysis is run on
     channel index 1 by default, but can be changed.
@@ -594,14 +606,14 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, ch
                 Ch0.finterval_ms = finterval_ms
 
             print(
-                    "Using dimensions: frame interval {:.2f}s, {:.2f} frames/min, pixel size: {:.2f} um ".format(
-                        finterval_s, frames_per_min, Ch0.pxSize_um))
+                    "Using dimensions: frame interval {:.2f}s, {:.2f} frames/min, pixel size: {:.2f} um. Output unit: {}".format(
+                        finterval_s, frames_per_min, Ch0.pxSize_um, unit))
 
 
             print("Start median filter of Channel 1...")
             Ch0.getTemporalMedianFilterArray()
             print("Elapsed for file {:.2f} s, now calculating Channel 1 flow...".format(time.time() - t1))
-            Analysis_Ch0 = FarenbackAnalyzer(Ch0)
+            Analysis_Ch0 = FarenbackAnalyzer(Ch0, unit)
             Analysis_Ch0.doFarenbackFlow()
 
             print("flow finished, calculating speeds...")
@@ -618,11 +630,13 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, ch
                                'tunit': tunit, 'Info': ij_metadata.get('Info', "None"), 'frames': Analysis_Ch0.flows.shape[0],
                                'slices': 1, 'channels': n_channels}
 
-            if n_channels == 2:
-                print("Loading Channel 2")
+            if n_channels >= 2:
+
                 if chToAnalyze == 0:
+                    print("Loading Channel {}".format(2))
                     Ch1 = Channel(1, tif, name=lab + "_Ch2")
                 else:
+                    print("Loading Channel {}".format(1))
                     Ch1 = Channel(0, tif, name=lab + "_Ch1")
 
                 print("Start median filter of the other channel ...")
