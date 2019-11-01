@@ -62,16 +62,16 @@ class AppWindow(QDialog, Ui_Main):
         #self.btn_cancel.clicked().connect(self.close)
 
         # Installs custom output streams
-        #sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
-        #sys.stderr = ErrorEmittingStream(textWritten=self.errorOutputWritten)
+        sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
+        sys.stderr = ErrorEmittingStream(textWritten=self.errorOutputWritten)
 
         self.show()
 
     def __del__(self):
         # Restore sys.stdout and sys.stderr
-        pass
-        #sys.stdout = sys.__stdout__
-        #sys.stderr = sys.__stderr__
+        #pass
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
 
     def in_folder_select(self):
 
