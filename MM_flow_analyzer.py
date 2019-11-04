@@ -583,7 +583,7 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, ch
             if tif.is_micromanager:
                 n_channels = int(tif.micromanager_metadata['Summary']['Channels'])
             else:
-                n_channels = int(ij_metadata['channels'])
+                n_channels = int(ij_metadata.get('channels', 1))
 
             Ch0 = Channel(chToAnalyze, tif, name=lab + "_Ch"+str(chToAnalyze+1))
 
