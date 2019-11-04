@@ -165,7 +165,7 @@ class Channel(object):
             elif (sz_unit == 'cm'):
                 px_size_um = px_size * 1000  # 1000 um/mm
 
-            elif (sz_unit == '\\u00B5m') or (sz_unit == 'um') or (sz_unit == 'micrometer'):
+            elif (sz_unit == '\\u00B5m') or (sz_unit == 'um') or (sz_unit == 'micrometer') or (sz_unit == 'micron'):
                 px_size_um = px_size
 
             return px_size_um, finterval_ms
