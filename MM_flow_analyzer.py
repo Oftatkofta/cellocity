@@ -559,11 +559,11 @@ def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
 
 def read_micromanager(tif):
     """returns metadata from a micromanager file"""
-
+    pass
 
 def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, chToAnalyze = 0, unit = "um/min"):
     """
-    Automatically analyzes tifffiles annd saves ouput in outfolder. If input has two channels, analysis is run on
+    Automatically analyzes tifffiles and saves ouput in outfolder. If input has two channels, analysis is run on
     channel index 1 by default, but can be changed.
     :param tif: Tifffile objekt
     :return:
@@ -572,18 +572,12 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, ch
 
         with tifffile.TiffFile(fname, multifile=False) as tif:
 
-            if tif.is_micromanager:
-                lab = os.path.split(fname)[1][:-8]
-            else:
-                lab = os.path.split(fname)[1][:-4]
+
+            lab = os.path.split(fname)[1][:-4]
             print("Working on: {} as {}".format(fname, lab))
             t1 = time.time()
             ij_metadata = tif.imagej_metadata
-
-            if tif.is_micromanager:
-                n_channels = int(tif.micromanager_metadata['Summary']['Channels'])
-            else:
-                n_channels = int(ij_metadata.get('channels', 1))
+            n_channels = int(ij_metadata.get('channels', 1))
 
             Ch0 = Channel(chToAnalyze, tif, name=lab + "_Ch"+str(chToAnalyze+1))
 
