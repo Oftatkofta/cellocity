@@ -7,10 +7,13 @@ Welcome to Cellocity's documentation!
 =====================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
-
+   introduction
+   tutorial
+   developer
+   api
 
 Indices and tables
 ==================

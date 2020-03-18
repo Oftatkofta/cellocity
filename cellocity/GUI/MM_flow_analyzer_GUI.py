@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QDialog, QApplication, QFileDialog
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtGui import QColor
 import sys, os
-from GUI.CellMate_main import Ui_UiMain as Ui_Main
+from GUI.main import UiMain as UiMain
 import MM_flow_analyzer
 
 
@@ -47,7 +47,7 @@ class AnalysisThread(QThread):
                                       self.channel, self.unit)
 
 
-class AppWindow(QDialog, Ui_Main):
+class AppWindow(QDialog, UiMain):
     def __init__(self):
         super(AppWindow, self).__init__()
 

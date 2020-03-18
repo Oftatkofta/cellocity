@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'CellMate_main.ui'
+# Form implementation generated from reading ui file 'main.ui'
 #
 # Created by: PyQt5 UI code generator 5.9.2
 #
@@ -8,7 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-class Ui_UiMain(object):
+class UiMain(object):
     def setupUi(self, UiMain):
         UiMain.setObjectName("UiMain")
         UiMain.resize(1071, 992)
