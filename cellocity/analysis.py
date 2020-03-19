@@ -13,7 +13,8 @@ class Analyzer(object):
         """
 
         :param channel: A Channel object
-        :param unit:(str) output unit, depends on analysis
+        :param unit: (str) output unit, depends on analysis
+        
         """
         self.channel = channel
         self.progress = 0  # 0-100 for pyQt5 progressbar
