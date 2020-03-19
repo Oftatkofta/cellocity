@@ -14,7 +14,7 @@ The "analysis" module
 ---------------------
 
 .. automodule:: cellocity.analysis
-   :memebers:
+   :members:
    
 The "validation" module
 -----------------------

@@ -10,6 +10,7 @@ import warnings
 
 class Channel(object):
     """
+    
     Base Class to keep track of one channel (x,y,t) of microscopy data.
 
     Channel Objects are created from :class:'tifffile.Tifffile' and act as shallow copies of the :class:

@@ -1,6 +1,7 @@
 import time, os
 import tifffile
-from cellocity.channel import Channel,
+from cellocity.channel import Channel
+from cellocity.analysis import FarenbackAnalyzer
 from matplotlib import pyplot as plt
 import numpy as np
 """
@@ -53,7 +54,6 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength):
             print("File done!")
     return True
 
-analyzeFiles(filelist[0:2], outdir, flowkwargs, scalebarFlag, scalebarLength)
 
 if __name__ == '__main__':
     gamma = r"C:\Users\Jens\Microscopy\MMgamma_demodata\dummydata_2\dummydata_2_MMStack_Position_a.ome.tif"
