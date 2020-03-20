@@ -16,7 +16,7 @@ setup(
     version='0.0.1',
     description='Velocity and vector analysis of microscopy data',
     long_description=readme,
-    long_description_content_type="text/x-rst",
+    long_description_content_type='text/x-rst',
     install_requires=["docutils>=0.16"],
     author='Jens Eriksson',
     author_email='jens.eriksson@imbim.uu.se',
