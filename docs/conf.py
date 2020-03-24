@@ -12,7 +12,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../cellocity'))
+sys.path.insert(0, os.path.abspath('../../cellocity'))
 
 
 # -- Project information -----------------------------------------------------
@@ -22,7 +22,7 @@ copyright = '2020, Jens Eriksson'
 author = 'Jens Eriksson'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1a'
+release = '0.0.1alpha'
 
 
 # -- General configuration ---------------------------------------------------
