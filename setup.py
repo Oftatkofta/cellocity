@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
-
 # Learn more: https://github.com/oftatkofta/cellocity
 
 from setuptools import setup, find_packages
 
 
-with open('README.rst') as f:
+with open('readme.rst') as f:
     readme = f.read()
-
-with open('LICENSE') as f:
-    license = f.read()
 
 setup(
     name='cellocity',
@@ -21,7 +17,7 @@ setup(
     author='Jens Eriksson',
     author_email='jens.eriksson@imbim.uu.se',
     url='https://github.com/oftatkofta/cellocity',
-    license=license,
+    license="GPLv3",
     packages=find_packages(exclude=('tests', 'docs', '.idea')),
     classifiers=[
         "Programming Language :: Python :: 3",
