@@ -9,7 +9,7 @@ with open('readme.rst') as f:
 
 setup(
     name='cellocity',
-    version='0.0.1',
+    version='0.0.2',
     description='Velocity and vector analysis of microscopy data',
     long_description=readme,
     long_description_content_type='text/x-rst',
@@ -22,8 +22,14 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
-        "Development Status :: 3 - Alpha"
+        "Development Status :: 3 - Alpha",
+        "Topic :: Scientific/Engineering",
     ],
-    python_requires='>=3.6'
+    python_requires='>=3.6',
+    project_urls={
+        'Documentation': 'https://cellocity.readthedocs.io/en/latest/',
+        'Research group': 'https://www.imbim.uu.se/research-groups/infection-and-defence/sellin-mikael/',
+        'Source': 'https://github.com/oftatkofta/cellocity',
+    },
     
 )
