@@ -7,11 +7,11 @@ import tifffile
 class Analyzer(object):
     """
     Base object for all Analysis object types
+
     """
 
     def __init__(self, channel, unit):
         """
-
         :param channel: A Channel object
         :param unit: (str) output unit, depends on analysis
         
@@ -50,6 +50,7 @@ class FarenbackAnalyzer(FlowAnalyzer):
         """
         :param channel: Channel object
         :param unit: (str) "um/s", "um/min", or "um/h"
+
         """
         super().__init__(channel, unit)
 
@@ -62,6 +63,7 @@ class FarenbackAnalyzer(FlowAnalyzer):
         um/px * frames/min * px/frame = um/min
 
         :return: (float) scaler
+
         """
 
         if not self.channel.doFrameIntervalSanityCheck():  # Are actual and intended frame intervals within 1%?
@@ -96,7 +98,8 @@ class FarenbackAnalyzer(FlowAnalyzer):
         Calculates Farenback flow for a single channel time lapse
 
         returns numpy array of dtype int32 with flow in the unit px/frame
-        Output values need to be multiplied by a scalar to be converted to speeds
+        Output values need to be multiplied by a scalar to be converted to speeds.
+
         """
 
         arr = self.channel.getTemporalMedianFilterArray()
@@ -133,7 +136,9 @@ class FarenbackAnalyzer(FlowAnalyzer):
         Scales all the output by multiplying with scaler, defalut output is in um/min if scaler is None
 
         :returns self.speeds
+
         """
+
         if (scaler == None):
             scaler = self.scaler
 
@@ -190,7 +195,8 @@ class FarenbackAnalyzer(FlowAnalyzer):
 
         :param img: 2D 8-bit np array to draw on
         :param pxlength: (int) length of scale bar in pixels
-        :return: 2D 8-bit np array image with scale bar drawn on
+        :return: 2D 8-bit np array image with scale bar drawn on.
+
         """
 
         h, w = img.shape[:2]
@@ -206,7 +212,9 @@ class FarenbackAnalyzer(FlowAnalyzer):
     def draw_all_flow_frames(self, scalebarFlag=False, scalebarLength=10, **kwargs):
         """
         Draws the flow on all the frames in bg with standard settings
+
         """
+
         flows = self.flows
         bg = self.channel.getTemporalMedianFilterArray()
         outshape = (flows.shape[0], flows.shape[1], flows.shape[2])
@@ -286,6 +294,7 @@ class OpenPivAnalyzer(FlowAnalyzer):
         """
         :param channel: Channel object
         :param unit: (str) "um/s", "um/min", or "um/h"
+
         """
         super().__init__(channel, unit)
 
@@ -309,6 +318,7 @@ class Analysis(object):
 class AlignmentIndex(Analysis):
     """
     Calculates the alignment index as defined as in Malinverno et. al 2017.
+
     """
 
     def __init__(self, analyzer, returnMagnitudesFlag=False):
@@ -316,7 +326,6 @@ class AlignmentIndex(Analysis):
         self.returnMagnitudesFlag = returnMagnitudesFlag
 
     def alignment_index(self, u, v, alsoReturnMagnitudes=False):
-
         """
         Returns an array of the same shape as u and v with the alignment index (ai), defined as in Malinverno et. al 2017.
         For every frame the ai is the average of the dot products of the mean velocity vector with each individual
@@ -335,6 +344,7 @@ class AlignmentIndex(Analysis):
             nunpy array with size=input.size where every entry is the alignment index in that pixel
 
         """
+
         assert (u.shape == v.shape) and (len(u.shape) == 2)  # Only single frames are processed
 
         vector_0 = np.array((np.mean(u), np.mean(v)))
@@ -359,7 +369,9 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, ch
     channel index 1 by default, but can be changed.
     :param tif: Tifffile objekt
     :return:
+
     """
+
     for fname in fnamelist:
 
         with tifffile.TiffFile(fname, multifile=False) as tif:

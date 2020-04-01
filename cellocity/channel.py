@@ -52,9 +52,20 @@ class Channel(object):
 
     def _page_extractor(self):
         """
-        :return: (list) Tif-Page objects corresponding to the chosen slice and channel
+        Tifffile objects reads the actual TIF image data together with the TIF-tags from disk and encapsulates them in
+        TiffPage objecs. The TiffPages that make up the channel data are read in this method.
+
+        Tifffile has an option to read TiffFrame objects instead of TiffPage objects. TiffFrames are light weight
+        versions of TiffPages, but they do not contain any TIF-tags. This method ensures that TiffPages are returned by
+        setting Tifffile.pages.useframes to _False_.
+
+        :return: (list) TiffPage objects corresponding to the chosen slice and channel
+
         """
+
+        self.tif.pages.useframes = False  # TiffFrames can't be used for extracting metadata
         out = []
+
         if self.tif.is_micromanager:
 
             sliceMap = self.tif.micromanager_metadata["IndexMap"]["Slice"]
@@ -81,10 +92,11 @@ class Channel(object):
     def _ij_pagemapper(self):
 
         """
-        Helper function to make maps for sorting IJ Pages in to slices and channels
+        Helper function to make maps for sorting IJ Pages in to slices and channels.
 
         :returns: (channelMap, sliceMap, frameMap) which are lists of integers describing which channel,
         slice, frame each Tiff-Page belongs to. Indexes start at 0.
+
         """
         nChannels = self.tif.imagej_metadata.get('channels', 1)
         nSlices = self.tif.imagej_metadata.get('slices', 1)

@@ -34,8 +34,11 @@ release = '0.0.1alpha'
 extensions = ['sphinx.ext.autodoc'
 ]
 
+# Both the class' docstring and the docstring in self.__init__() is inserted.
+autoclass_content = 'both'
+
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+#templates_path = ['_templates']
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
