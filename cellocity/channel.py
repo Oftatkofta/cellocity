@@ -225,45 +225,45 @@ class Channel(object):
 
         return out
 
-    def getTemporalMedianFilterArray(self, startFrame=0, stopFrame=None,
-                               frameSamplingInterval=3, recalculate=False):
+    def doTemporalMedianFilter(self, startFrame=0, stopFrame=None,
+                               frameSamplingInterval=3):
         """
-        The function first runs a gliding N-frame temporal median on every pixel to
+        Calculates a temporal median filter of the Channel.
+
+        The function runs a gliding N-frame temporal median on every pixel to
         smooth out noise and to remove fast moving debris that is not migrating
-        cells. Recalculates the median array if recalculate is True.
+        cells.
 
-        :param arr: (3d numpy array) with a shape of (t, y, x)
-        :param stopFrame: (int) Last frame to analyze, defaults to analyzing all frames if None
-        :param startFrame: (int) First frame to analyze
-        :param frameSamplingInterval: (int) do median projection every N frames
-        :param recalculate: (bool) Should the median projection be recalculated?
+        :param arr: 3D numpy array with a shape of (t, y, x)
+        :type arr: numpy.ndarray shate=(t, y, x)
+        :param stopFrame: Last frame to analyze, defaults to analyzing all frames if ``None``.
+        :type stopFrame: int
+        :param startFrame: First frame to analyze.
+        :type startFrame: int
+        :param frameSamplingInterval: Do median projection every N frames.
+        :type frameSamplingInterval: int
 
-        :return: An Nupy array of the type float32
+        :return: 1 if successful.
+        :rtype: bool
+
 
         """
-
-        if len(self.medianArray) != 0:
-            if not recalculate:
-
-                return self.medianArray
 
         if (stopFrame == None) or (stopFrame > len(self.pages)):
-            stopFrame = len(self.pages)
+            raise ValueError("StopFrame cannot be None or larger than number of frames!")
 
         if (startFrame >= stopFrame):
-            raise ValueError("StartFrame cannot be larger than Stopframe!")
+            raise ValueError("StartFrame cannot be larger than or equal to Stopframe!")
 
         if (stopFrame-startFrame < frameSamplingInterval):
             raise ValueError("Not enough frames selected to do median projection! ")
 
-
         self.frameSamplingInterval = frameSamplingInterval
         arr = self.getArray()
-        # nr_out_frames = n_in-(samplingInterval-1)
         nr_outframes = (stopFrame - startFrame) - (frameSamplingInterval - 1)
-
         outshape = (nr_outframes, arr.shape[1], arr.shape[2])
 
+        #Filling a pre-created array is computationally cheaper
         self.medianArray = np.ndarray(outshape, dtype=np.float32)
 
         outframe = 0
@@ -275,6 +275,24 @@ class Channel(object):
 
             self.medianArray[outframe] = frame_to_store
             outframe += 1
+
+        return 1
+
+    def getTemporalMedianFilterArray(self):
+        """
+        Retrurns temporal median filtered channel data.
+
+        If the median filter has not been previously calculated the function will run ``doTemporalMedianFilter()``  with
+        the default settings on the full Channel array to generate it.
+
+        :return: A Nupy array of the type float32 representing the temporal median of Channel data.
+        :rtype: numpy.ndarray dtype=np.float32
+
+        """
+
+        if len(self.medianArray) == 0:
+            stopFrame = self.getArray().shape[0]
+            self.doTemporalMedianFilter(stopFrame=stopFrame)
 
         return self.medianArray
 

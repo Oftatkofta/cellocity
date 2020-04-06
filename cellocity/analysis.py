@@ -14,8 +14,9 @@ class Analyzer(object):
         """
         :param channel: A Channel object
         :param unit: (str) output unit, depends on analysis
-        
+
         """
+
         self.channel = channel
         self.progress = 0  # 0-100 for pyQt5 progressbar
         self.unit = unit
@@ -52,6 +53,7 @@ class FarenbackAnalyzer(FlowAnalyzer):
         :param unit: (str) "um/s", "um/min", or "um/h"
 
         """
+
         super().__init__(channel, unit)
 
     def _getScaler(self):
@@ -296,6 +298,7 @@ class OpenPivAnalyzer(FlowAnalyzer):
         :param unit: (str) "um/s", "um/min", or "um/h"
 
         """
+
         super().__init__(channel, unit)
 
     # TODO everything
@@ -304,20 +307,25 @@ class OpenPivAnalyzer(FlowAnalyzer):
 class Analysis(object):
     """
     Base object for analysis of Analyzer classes
+
     """
 
     def __init__(self, analyzer):
         """
-
         :param analyzer:
         Analysis object
+
         """
+
         self.analyzer = analyzer
 
 
 class AlignmentIndex(Analysis):
     """
     Calculates the alignment index as defined as in Malinverno et. al 2017.
+
+    The alignment index is 1 when the local velocity is parallel to the mean
+    direction of migration  (-1 if antiparallel).
 
     """
 
@@ -367,6 +375,7 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, ch
     """
     Automatically analyzes tifffiles and saves ouput in outfolder. If input has two channels, analysis is run on
     channel index 1 by default, but can be changed.
+
     :param tif: Tifffile objekt
     :return:
 
