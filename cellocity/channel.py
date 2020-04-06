@@ -235,7 +235,7 @@ class Channel(object):
         cells.
 
         :param arr: 3D numpy array with a shape of (t, y, x)
-        :type arr: numpy.ndarray shate=(t, y, x)
+        :type arr: numpy.ndarray shape=(t, y, x)
         :param stopFrame: Last frame to analyze, defaults to analyzing all frames if ``None``.
         :type stopFrame: int
         :param startFrame: First frame to analyze.
