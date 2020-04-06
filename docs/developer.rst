@@ -9,9 +9,8 @@ A note on metadata and file formats
 It goes without saying that you need to have a well calibrated microscope that
 writes correct metadata into your image files, in order to perform meaningful cell dynamic analysis. The minimum amount of information you need is data on pixel size and the time resolution between frames. Image format specific metadata, such as Micromanager-metadata and IJmetadata contain this information and is the primary source of this information throughout Cellocity.
 
-Micromanager saves its metadata in a private IFD tag (51123), which Tifffile reads in as a dictionary, accessible via ``tif.micromanager_metadata``. 
+Micromanager saves its metadata in a private IFD tag (51123), which ``Tifffile`` reads in as a ``dict``, accessible via ``tif.micromanager_metadata``. The structure of the dictionary is, annoyingly, slightly different between the 1.4.23, 2.0-beta, and 2.0-gamma branches of Micromanager. In 1.4.23 and 2.0-gamma the frame interval is stored in ``tif.micromanager_metadata['Summary']['Interval_ms']``, but in 2.0-beta it is stored in ``tif.micromanager_metadata['Summary']['WaitInterval']``. The discrepancy is probably due to the fact that this value records the wait interval time between frames of the acquisition, not the _actual_ frame interval. It is possible to setup a acquisition with a frame interval that the microscope physically can't keep up with. Therefore, Cellocity performs an additional sanity check of the individual time stamps of the frames (see ``Channel.doFrameIntervalSanityCheck()``, in order to make sure you don't run in to this problem during analysis. 
 
- 
 
 Pixel resolution Micromanager vs ImageJ .tif files
 --------------------------------------------------

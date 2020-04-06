@@ -90,7 +90,6 @@ class Channel(object):
         return out
 
     def _ij_pagemapper(self):
-
         """
         Helper function to make maps for sorting IJ Pages in to slices and channels.
 
@@ -137,6 +136,7 @@ class Channel(object):
         :param mm_metadata: (dict) MicroManager metadata dictionary
 
         :return: (tuple) (pixel_size_um, frame_interval)
+
         """
         if self.tif.is_micromanager:
             # if the file is a MM file this branch determines which version
@@ -313,7 +313,19 @@ class Channel(object):
         return self.finterval_ms
 
     def doFrameIntervalSanityCheck(self, maxDiff=0.01):
-        #Checks if the intended frame interval matches the actual within maxDiff defaults to allowing 1% difference
+        """
+        Performs sanity check on frame intervals.
+
+        Checks if the intended frame interval from metadata matches the actual frame interval from individual frame time
+        stamps. If the mean difference is more than maxDiff the function returns ``False``. Defaults to allowing a
+        1% difference between mean actual frame interval and intended frame interval by default.
+
+        :param maxDiff: Maximum allowed difference between actual frame intervals and the intended interval, expressed as a fraction.
+        :type maxDiff: float
+        :return: True if the fraction of actual and intended frame intervals is below maxDiff.
+        :rtype: bool
+
+        """
 
 
         if len(self.pages) == 1:
