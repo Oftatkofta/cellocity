@@ -213,7 +213,7 @@ class FarenbackAnalyzer(FlowAnalyzer):
 
     def draw_all_flow_frames(self, scalebarFlag=False, scalebarLength=10, **kwargs):
         """
-        Draws the flow on all the frames in bg with standard settings
+        Draws the flow on all the frames in bg with standard settings.
 
         """
 
@@ -312,8 +312,7 @@ class Analysis(object):
 
     def __init__(self, analyzer):
         """
-        :param analyzer:
-        Analysis object
+        :param analyzer: Analysis object
 
         """
 
@@ -324,8 +323,7 @@ class AlignmentIndex(Analysis):
     """
     Calculates the alignment index as defined as in Malinverno et. al 2017.
 
-    The alignment index is 1 when the local velocity is parallel to the mean
-    direction of migration  (-1 if antiparallel).
+    The alignment index is 1 when the local velocity is parallel to the mean direction of migration  (-1 if antiparallel).
 
     """
 
@@ -342,14 +340,10 @@ class AlignmentIndex(Analysis):
         If alsoReturnMagnitudes is set to True, then an additional array with the vector magnitudes, i.e, speeds in
         pixels/frame is also returned.
 
-        :param u:
-            2D numpy array with u component of velocity vectors
-        :param v:
-            2D numpy array with v component of velocity vectors
-        :param alsoReturnMagnitudes:
-            (bool) Should the function also return the vector magnitudes
-        :return:
-            nunpy array with size=input.size where every entry is the alignment index in that pixel
+        :param u: 2D numpy array with u component of velocity vectors
+        :param v: 2D numpy array with v component of velocity vectors
+        :param alsoReturnMagnitudes: (bool) Should the function also return the vector magnitudes
+        :return: nunpy array with size=input.size where every entry is the alignment index in that pixel
 
         """
 
