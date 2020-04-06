@@ -4,20 +4,20 @@ The cellocity API reference
 .. automodule:: cellocity 
    :members:
    
-The "channel" module
---------------------
+The channel module.
+-------------------
 
 .. automodule:: cellocity.channel 
    :members: 
    
-The "analysis" module
----------------------
+The analysis module.
+--------------------
 
 .. automodule:: cellocity.analysis 
    :members: 
    
-The "validation" module
------------------------
+The validation module.
+----------------------
 
 .. automodule:: cellocity.validation 
    :members: 
