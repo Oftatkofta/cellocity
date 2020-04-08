@@ -118,7 +118,6 @@ PIV_buddy/
 *.Rproj
 *.Rmd
 *.html
-*.png
 *.tif
 *.xml
 *.docx
