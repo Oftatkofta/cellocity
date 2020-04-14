@@ -1,6 +1,6 @@
-"tifffile==2020.2.16"
-"opencv-python==4.2.0"
-"openpiv==0.21.3"
-"numpy==1.18.1"
-"pandas==1.0.1"
+tifffile==2020.2.16
+opencv-python==4.2.0
+openpiv==0.21.3
+numpy==1.18.1
+pandas==1.0.1
 
