@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 
 
-with open('readme.rst') as f:
+with open('readme.md') as f:
     readme = f.read()
 
 setup(
@@ -12,7 +12,7 @@ setup(
     version='0.0.2',
     description='Velocity and vector analysis of microscopy data',
     long_description=readme,
-    long_description_content_type='text/x-rst',
+    long_description_content_type='text/markdown',
     install_requires=["docutils>=0.16"],
     author='Jens Eriksson',
     author_email='jens.eriksson@imbim.uu.se',
