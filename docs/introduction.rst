@@ -22,13 +22,16 @@ Cellocity has been developed over multiple years and several projects. The nucle
 Cellocity architecture
 ----------------------
 
-Cellocity is built on top of  Christoph Gohlke's `Tifffile library <https://pypi.org/project/tifffile/>`_ and uses the ``Tifffile`` object to read input and to write output files. Cellocity also relies heavily on `OpenCV <https://opencv.org/>`_ and `OpenPIV <http://www.openpiv.net/>`_ for optical flow analysis and output visualizations. `NumPy <https://numpy.org/>`_ is used internally for image data manipulation in the form of `numpy.ndarrays`.
+Cellocity is built on top of  Christoph Gohlke's `Tifffile library <https://pypi.org/project/tifffile/>`_ and uses the ``Tifffile`` object to read input and to write output files. Cellocity also relies heavily on `OpenCV <https://opencv.org/>`_ and `OpenPIV <http://www.openpiv.net/>`_ for optical flow analysis and output visualizations. `NumPy <https://numpy.org/>`_ is used internally for image data manipulation in the form of ``numpy.ndarrays``.
 
-The core element in Cellocity is the ``Channel`` object, which represents one Z-plane of one image channel. ``Channel`` objects also handle image pre-processing, such as temporal or spatial median filtering. ``Channel`` objects are then given as input to ``Analysis`` objects, which perform specific analysis on the data. ``Analysis`` objects can then, in turn, be given to ``Analyzer`` objects, which take care of performing further analysis, such as calculating the alignment index, instantaneous order parameter (:math:`{\psi}`), and correlation length.
+The core element in Cellocity is the ``Channel`` object, which represents one Z-plane of one time lapse image channel. ``Channel`` objects also handle image pre-processing, such as temporal or spatial median filtering. ``Channel`` objects are then given as input to ``Analysis`` objects, which perform specific analysis on the data. ``Analysis`` objects can then, in turn, be given to ``Analyzer`` objects, which take care of performing further analysis, such as calculating the alignment index, instantaneous order parameter (:math:`{\psi}`), and correlation length.
 
-Cool algos
-----------
- :math:`{\psi}` = 1 corresponds to a perfectly uniform velocity field, where all the cells move in the same direction and with the same speed, while :math:`{\psi}` = 0 is expected for a randomly oriented velocity field. 
+Examples of algorithms implemented
+----------------------------------
+Instantaneous Order Parameter (:math:`{\psi}`)
+   :math:`{\psi}` = 1 corresponds to a perfectly uniform velocity field, where all the cells move in the same direction and with the same speed, while :math:`{\psi}` = 0 is expected for a randomly oriented velocity field. See [Malinverno `et. al` (2017)] for details.
+
+Alignment Index
 
 
 
@@ -54,4 +57,8 @@ Simple optical flow calculation example::
     analysis_Ch1 = FarenbackAnalyzer(channel_1, "um/min")
     analysis_Ch1.doFarenbackFlow()
 
+References
+----------
 
+.. [Malinverno `et. al` (2017)] Malinverno, C., Corallino, S., Giavazzi, F. et al. Endocytic reawakening of motility in jammed epithelia. Nature   Mater 16, 587–596 (2017). https://doi.org/10.1038/nmat4848
+[#] Natuer et al
