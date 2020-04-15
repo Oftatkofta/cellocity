@@ -32,6 +32,8 @@ Instantaneous Order Parameter (:math:`{\psi}`)
    :math:`{\psi}` = 1 corresponds to a perfectly uniform velocity field, where all the cells move in the same direction and with the same speed, while :math:`{\psi}` = 0 is expected for a randomly oriented velocity field. See :cite:`Malinverno2017` for details.
 
 Alignment Index
+  The Alignment Index describes how well each vector in a vector field aligns with the average velocity vector.
+  See :cite:`Malinverno2017` for further details.
 
 
 
@@ -57,4 +59,6 @@ Simple optical flow calculation example::
     analysis_Ch1 = FarenbackAnalyzer(channel_1, "um/min")
     analysis_Ch1.doFarenbackFlow()
 
-.. bibliography:: references.bib
+.. bibliography:: bibliography.bib
+   :cited:
+   
