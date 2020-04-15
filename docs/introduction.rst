@@ -4,7 +4,7 @@ Introduction to Cellocity
 A 30 second pitch
 -----------------
 
-Cellocity is an bioimage analysis tool for quantifying confluent cell dynamics. The main advantages of Cellocity is its ability work on unlabeled Brightfield time lapse microscopy data, and its tools that both quantify and visualize abstract optical flow based analysis to the user.
+Cellocity is an bioimage analysis tool for quantifying confluent cell dynamics. The main advantages of Cellocity is its ability work on unlabeled Brightfield time lapse microscopy data, and its ability to both quantify and visualize abstract optical flow analysis to the user.
 
 .. figure:: _static/convergence.png
     :align: left
@@ -22,7 +22,9 @@ Cellocity has been developed over multiple years and several projects. The nucle
 Cellocity architecture
 ----------------------
 
-Cellocity is built on top of  Christoph Gohlke's `Tifffile library <https://pypi.org/project/tifffile/>`_ and uses the ``Tifffile`` object to read input and to write output files. The core element in Cellocity is the ``Channel`` object, which represents one Z-plane of one image channel. ``Channel`` objects also handle image pre-processing, such as temporal or spatial median filtering. ``Channel`` objects are then given as input to ``Analysis`` objects, which perform specific analysis on the data. ``Analysis`` objects can then, in turn, be given to ``Analyzer`` objects, which take care of performing further analysis, such as calculating the alignment index, instantaneous order parameter (:math:`{\psi}`), and correlation length.
+Cellocity is built on top of  Christoph Gohlke's `Tifffile library <https://pypi.org/project/tifffile/>`_ and uses the ``Tifffile`` object to read input and to write output files. Cellocity also relies heavily on `OpenCV <https://opencv.org/>`_ for optical flow analysis, and `NumPy <https://numpy.org/>`_ for image data manipulation in the form of `numpy.ndarrays`.
+
+The core element in Cellocity is the ``Channel`` object, which represents one Z-plane of one image channel. ``Channel`` objects also handle image pre-processing, such as temporal or spatial median filtering. ``Channel`` objects are then given as input to ``Analysis`` objects, which perform specific analysis on the data. ``Analysis`` objects can then, in turn, be given to ``Analyzer`` objects, which take care of performing further analysis, such as calculating the alignment index, instantaneous order parameter (:math:`{\psi}`), and correlation length.
 
 Cool algos
 ----------
