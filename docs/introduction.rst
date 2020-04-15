@@ -29,7 +29,7 @@ The core element in Cellocity is the ``Channel`` object, which represents one Z-
 Examples of algorithms implemented
 ----------------------------------
 Instantaneous Order Parameter (:math:`{\psi}`)
-   :math:`{\psi}` = 1 corresponds to a perfectly uniform velocity field, where all the cells move in the same direction and with the same speed, while :math:`{\psi}` = 0 is expected for a randomly oriented velocity field. See [Malinverno `et. al` (2017)] for details.
+   :math:`{\psi}` = 1 corresponds to a perfectly uniform velocity field, where all the cells move in the same direction and with the same speed, while :math:`{\psi}` = 0 is expected for a randomly oriented velocity field. See [Malinverno `et. al` (2017)]_ for details.
 
 Alignment Index
 
