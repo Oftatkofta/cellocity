@@ -123,3 +123,5 @@ PIV_buddy/
 *.docx
 
 MM_flow_tester.py
+docs/bibliography.bib.bak
+docs/bibliography.bib.sav

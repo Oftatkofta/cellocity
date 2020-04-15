@@ -29,7 +29,7 @@ The core element in Cellocity is the ``Channel`` object, which represents one Z-
 Examples of algorithms implemented
 ----------------------------------
 Instantaneous Order Parameter (:math:`{\psi}`)
-   :math:`{\psi}` = 1 corresponds to a perfectly uniform velocity field, where all the cells move in the same direction and with the same speed, while :math:`{\psi}` = 0 is expected for a randomly oriented velocity field. See [Malinverno `et. al` (2017)]_ for details.
+   :math:`{\psi}` = 1 corresponds to a perfectly uniform velocity field, where all the cells move in the same direction and with the same speed, while :math:`{\psi}` = 0 is expected for a randomly oriented velocity field. See :cite:`Malinverno2017` for details.
 
 Alignment Index
 
@@ -57,8 +57,4 @@ Simple optical flow calculation example::
     analysis_Ch1 = FarenbackAnalyzer(channel_1, "um/min")
     analysis_Ch1.doFarenbackFlow()
 
-References
-----------
-
-.. [Malinverno `et. al` (2017)] Malinverno, C., Corallino, S., Giavazzi, F. et al. Endocytic reawakening of motility in jammed epithelia. Nature   Mater 16, 587–596 (2017). https://doi.org/10.1038/nmat4848
-[#] Natuer et al
+.. bibliography:: references.bib
