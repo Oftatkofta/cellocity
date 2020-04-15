@@ -36,7 +36,7 @@ Alignment Index
   See :cite:`Malinverno2017` for further details.
   
 5-:math:`{\sigma}` correlation length
-  5-:math:`{\sigma}` correlation length is a way to measure the correlation length in large vector fields. It finds the average distance at which the direction of velocities are no longer significantly different at a level of 5-:math:`{\sigma}`. The algorithm was originally presented and utilized in :cite:`Lang2018`. 
+  5-:math:`{\sigma}` correlation length is a way to measure the correlation length in large vector fields. It finds the average distance at which the direction of velocities are no longer significantly different at a level of 5 standard deviations (:math:`{\sigma}`). The algorithm was originally presented and utilized in :cite:`Lang2018`. 
 
 
 
