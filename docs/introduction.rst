@@ -34,6 +34,9 @@ Instantaneous Order Parameter (:math:`{\psi}`)
 Alignment Index
   The Alignment Index describes how well each vector in a vector field aligns with the average velocity vector.
   See :cite:`Malinverno2017` for further details.
+  
+5-:math:`{sigma}` correlation length
+  5-:math:`{sigma}` correlation length is a way to measure the correlation length in large vector fields. It finds the average distance at which the direction of velocities are no longer significantly different at a level of 5-:math:`{sigma}`. The algorithm was originally presented and utilized in :cite:`Lang2018`. 
 
 
 
@@ -59,6 +62,8 @@ Simple optical flow calculation example::
     analysis_Ch1 = FarenbackAnalyzer(channel_1, "um/min")
     analysis_Ch1.doFarenbackFlow()
 
+References
+----------
 .. bibliography:: bibliography.bib
    :cited:
    
