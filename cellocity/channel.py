@@ -225,58 +225,7 @@ class Channel(object):
 
         return out
 
-    def doTemporalMedianFilter(self, startFrame=0, stopFrame=None,
-                               frameSamplingInterval=3):
-        """
-        Calculates a temporal median filter of the Channel.
 
-        The function runs a gliding N-frame temporal median on every pixel to
-        smooth out noise and to remove fast moving debris that is not migrating
-        cells.
-
-        :param arr: 3D numpy array with a shape of (t, y, x)
-        :type arr: numpy.ndarray shape=(t, y, x)
-        :param stopFrame: Last frame to analyze, defaults to analyzing all frames if ``None``.
-        :type stopFrame: int
-        :param startFrame: First frame to analyze.
-        :type startFrame: int
-        :param frameSamplingInterval: Do median projection every N frames.
-        :type frameSamplingInterval: int
-
-        :return: 1 if successful.
-        :rtype: bool
-
-
-        """
-
-        if (stopFrame == None) or (stopFrame > len(self.pages)):
-            raise ValueError("StopFrame cannot be None or larger than number of frames!")
-
-        if (startFrame >= stopFrame):
-            raise ValueError("StartFrame cannot be larger than or equal to Stopframe!")
-
-        if (stopFrame-startFrame < frameSamplingInterval):
-            raise ValueError("Not enough frames selected to do median projection! ")
-
-        self.frameSamplingInterval = frameSamplingInterval
-        arr = self.getArray()
-        nr_outframes = (stopFrame - startFrame) - (frameSamplingInterval - 1)
-        outshape = (nr_outframes, arr.shape[1], arr.shape[2])
-
-        #Filling a pre-created array is computationally cheaper
-        self.medianArray = np.ndarray(outshape, dtype=np.float32)
-
-        outframe = 0
-
-        for inframe in range(startFrame, stopFrame-frameSamplingInterval+1):
-
-            # median of frames n1,n2,n3...
-            frame_to_store = np.median(arr[inframe:inframe + frameSamplingInterval], axis=0).astype(np.float32)
-
-            self.medianArray[outframe] = frame_to_store
-            outframe += 1
-
-        return 1
 
     def getTemporalMedianFilterArray(self):
         """
@@ -362,6 +311,105 @@ class Channel(object):
         #reshapes 3D (t, x, y) array to (t, 1, 1, x, y, 1) for saving dimensions in TZCYXS order
         shape = self.medianArray.shape
         self.medianArray.shape = (shape[0], 1, 1, shape[1], shape[2], 1)
+
+class MedianChannel(Channel):
+    """
+    A subclass of channel where the channel array has been temporal median filtered.
+
+    Temporal median filtering is very useful when performing optical flow based analysis of time lapse microscopy data
+    beacuse it filters out fast moving free-floating debree from the dataset. Note that the median array will be
+    shorter than the original array. In the default case if a temporal median of 3 frames is applied, the the output
+    array will contain 3-1 = 2 frames less than the input if a gliding projection (default) is performed.
+
+    """
+
+    def __init__(self, channel, doGlidingProjection = True, frameSamplingInterval=3, startFrame=0, stopFrame=None):
+        """
+        :param channel: Parent Channel object for the MedianChannel
+        :type channel: Channel
+        :param frameSamplingInterval: How many frames to use in temporal median projection
+
+        """
+
+        self.parent_channnel = channel
+        self.chIndex = self.parent_channnel.chIndex
+        self.sliceIdx = self.parent_channnel.sliceIdx
+        self.tif = self.parent_channnel.tif
+        self.name = self.parent_channnel.name
+        self.tif_ij_metadata = self.parent_channnel.tif_ij_metadata
+        self.pxSize_um = self.parent_channnel.pxSize_um
+        self.finterval_ms = self.parent_channnel.finterval_ms
+        self.elapsedTimes_ms = self._recalculate_elapsed_times()
+        self.pages = self.parent_channnel.pages
+        self.array = self.doTemporalMedianFilter(startFrame, stopFrame, frameSamplingInterval)
+        self.actualFrameIntervals_ms = self.parent_channnel.getActualFrameIntevals_ms()
+
+        #fields specific for MedianChannel
+        self.doGlidingProjection = doGlidingProjection
+        self.frameSamplingInterval = frameSamplingInterval
+        self.startFrame = stopFrame
+        self.stopFrame = stopFrame
+
+    def _recalculate_elapsed_times(self):
+        #TODO
+        return []
+
+    def doTemporalMedianFilter(self, doGlidingProjection, startFrame, stopFrame,
+                               frameSamplingInterval):
+        """
+        Calculates a temporal median filter of the Channel.
+
+        The function runs a gliding N-frame temporal median on every pixel to
+        smooth out noise and to remove fast moving debris that is not migrating
+        cells.
+
+        :param doGlidingProjection: Should a gliding (default) or staggered projection be performed?
+        :type doGlidingProjection: bool
+        :param stopFrame: Last frame to analyze, defaults to analyzing all frames if ``None``.
+        :type stopFrame: int
+        :param startFrame: First frame to analyze.
+        :type startFrame: int
+        :param frameSamplingInterval: Do median projection every N frames.
+        :type frameSamplingInterval: int
+
+        :return: 1 if successful.
+        :rtype: bool
+
+
+        """
+
+        if (stopFrame == None) or (stopFrame > len(self.pages)):
+            raise ValueError("StopFrame cannot be None or larger than number of frames!")
+
+        if (startFrame >= stopFrame):
+            raise ValueError("StartFrame cannot be larger than or equal to Stopframe!")
+
+        if (stopFrame-startFrame < frameSamplingInterval):
+            raise ValueError("Not enough frames selected to do median projection! ")
+
+        arr = self.parent_channnel.getArray()
+
+        if doGlidingProjection:
+            nr_outframes = (stopFrame - startFrame) - (frameSamplingInterval - 1)
+
+        else:
+            nr_outframes = (stopFrame - startFrame) - (frameSamplingInterval - 1)
+
+        outshape = (nr_outframes, arr.shape[1], arr.shape[2])
+        outframe = 0
+        # Filling a pre-created array is computationally cheaper
+        self.medianArray = np.ndarray(outshape, dtype=np.float32)
+
+
+        for inframe in range(startFrame, stopFrame-frameSamplingInterval+1):
+
+            # median of frames n1,n2,n3...
+            frame_to_store = np.median(arr[inframe:inframe + frameSamplingInterval], axis=0).astype(np.float32)
+
+            self.medianArray[outframe] = frame_to_store
+            outframe += 1
+
+        return 1
 
 
 def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):

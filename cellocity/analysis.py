@@ -13,6 +13,7 @@ class Analyzer(object):
     def __init__(self, channel, unit):
         """
         :param channel: A Channel object
+        :type channel: class:`channel.Channel`
         :param unit: (str) output unit, depends on analysis
 
         """
@@ -27,7 +28,8 @@ class FlowAnalyzer(Analyzer):
     Base object for all optical flow analysis object types.
 
     Stores UV vector components in self.flows as a (t, x, y, uv) numpy array.
-    Stores pixel speeds, scaling factors, histograms etc.
+    Stores pixel speeds, scaling factors, histograms etc. Has common vector field quantificaton methods, such as
+    calcukating mean square velocity, alignment indaex, and the instantaneous order parameter.
 
     """
 
@@ -39,6 +41,97 @@ class FlowAnalyzer(Analyzer):
         self.histograms = None  # populated by doFlowsToAvgSpeed if doHist = True
         self.drawnFrames = None  # for output visualization
         self.scaler = self._getScaler()  # value to multiply vector lengths by to get selected unit from px/frame
+
+    def get_u_array(self):
+        """
+        Returns the u-component array of self.flows
+
+        :return: u-component of velocity vectors as a NumPy array
+        :rtype: numpy.ndarray
+        """
+
+        return self.flows[:, :, :, 1]
+
+    def alignment_index(self, u, v, alsoReturnMagnitudes=False):
+        """
+        Returns an array of the same shape as u and v with the alignment index (ai), defined as in Malinverno et. al 2017.
+        For every frame the ai is the average of the dot products of the mean velocity vector with each individual
+        vector, all divided by the product of their magnitudes.
+
+        If alsoReturnMagnitudes is set to True, then an additional array with the vector magnitudes, i.e, speeds in
+        pixels/frame is also returned.
+
+        :param u: 2D numpy array with u component of velocity vectors
+        :param v: 2D numpy array with v component of velocity vectors
+        :param alsoReturnMagnitudes: (bool) Should the function also return the vector magnitudes
+        :return: nunpy array with size=input.size where every entry is the alignment index in that pixel
+
+        """
+
+        assert (u.shape == v.shape) and (len(u.shape) == 2)  # Only single frames are processed
+
+        vector_0 = np.array((np.mean(u), np.mean(v)))
+        v0_magnitude = np.linalg.norm(vector_0)
+
+        vector_magnitudes = np.sqrt((np.square(u) + np.square(v)))  # a^2 + b^2 = c^2
+        magnitude_products = vector_magnitudes * v0_magnitude
+        dot_products = u * vector_0[0] + v * vector_0[1]  # Scalar multiplication followed by array addition
+
+        ai = np.divide(dot_products, magnitude_products)
+
+        if alsoReturnMagnitudes:
+            return ai, vector_magnitudes
+
+        else:
+            return ai
+
+    def rms(self, frame): #Root Mean Square Velocity
+        """
+        Calculates the root mean square velocity of the input frame number from optical flow data in self.flows.
+
+        rms is the speed, or vector magnitudes, in the unit pixels/frame. This is equivalent to taking the
+        square root of the mean square velocity. rms is used in the calculation of IOP.
+
+        :param frame: the number of the frame to be analyzed
+        :type frame: int
+        :return: the root mean square velocity of the velocity vectors in the frame
+        :rtype: float
+        """
+        u=self.get_u_array()
+        rms = np.sqrt(np.mean(np.square(u)+np.square(v))) #sqrt(u^2+v^2)
+
+        return rms
+
+    def smvvm(self, u, v):  # square_mean_vectorial_velocity_magnitude
+        """
+        Array addition of the squared average vector components, used in calculating the instantaneous order parameter
+
+        :param u:
+            2D numpy array with the u component of velocity vectors
+        :param v:
+            2D numpy array with the u component of velocity vectors
+        :return:
+            2D numpy array with the u component of velocity vectors
+
+        """
+
+        return np.square(np.mean(u)) + np.square(np.mean(v))
+
+    def instantaneous_order_parameter(self, u, v):
+        """
+        Calculates the instantaneous order parameter (iop) in one PIV frame see  Malinverno et. al 2017 for a more detailed
+        explanation. The iop is a measure of how similar the vectors in a field are, which takes in to account both the
+        direcions and magnitudes of the vectors. iop always between 0 and 1, with iop = 1 being a perfectly uniform field
+        of identical vectors, and iop = 0 for a perfectly random field.
+
+        :param u:
+            2D numpy array with the u component of velocity vectors
+        :param v:
+            2D numpy array with the u component of velocity vectors
+        :return:
+            (float) iop of vector field
+        """
+        return smvvm(u, v) / msv(u, v) #square_mean_vectorial_velocity_magnitude/Mean Square Velocity
 
 
 class FarenbackAnalyzer(FlowAnalyzer):
@@ -331,38 +424,7 @@ class AlignmentIndex(Analysis):
         super().__init__(analyzer)
         self.returnMagnitudesFlag = returnMagnitudesFlag
 
-    def alignment_index(self, u, v, alsoReturnMagnitudes=False):
-        """
-        Returns an array of the same shape as u and v with the alignment index (ai), defined as in Malinverno et. al 2017.
-        For every frame the ai is the average of the dot products of the mean velocity vector with each individual
-        vector, all divided by the product of their magnitudes.
 
-        If alsoReturnMagnitudes is set to True, then an additional array with the vector magnitudes, i.e, speeds in
-        pixels/frame is also returned.
-
-        :param u: 2D numpy array with u component of velocity vectors
-        :param v: 2D numpy array with v component of velocity vectors
-        :param alsoReturnMagnitudes: (bool) Should the function also return the vector magnitudes
-        :return: nunpy array with size=input.size where every entry is the alignment index in that pixel
-
-        """
-
-        assert (u.shape == v.shape) and (len(u.shape) == 2)  # Only single frames are processed
-
-        vector_0 = np.array((np.mean(u), np.mean(v)))
-        v0_magnitude = np.linalg.norm(vector_0)
-
-        vector_magnitudes = np.sqrt((np.square(u) + np.square(v)))  # a^2 + b^2 = c^2
-        magnitude_products = vector_magnitudes * v0_magnitude
-        dot_products = u * vector_0[0] + v * vector_0[1]  # Scalar multiplication followed by array addition
-
-        ai = np.divide(dot_products, magnitude_products)
-
-        if alsoReturnMagnitudes:
-            return ai, vector_magnitudes
-
-        else:
-            return ai
 
 
 def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, chToAnalyze=0, unit="um/min"):
