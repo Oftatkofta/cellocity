@@ -393,21 +393,28 @@ class MedianChannel(Channel):
             nr_outframes = (stopFrame - startFrame) - (frameSamplingInterval - 1)
 
         else:
-            nr_outframes = (stopFrame - startFrame) - (frameSamplingInterval - 1)
+            nr_outframes = int((stopFrame - startFrame) / frameSamplingInterval)
 
         outshape = (nr_outframes, arr.shape[1], arr.shape[2])
         outframe = 0
         # Filling a pre-created array is computationally cheaper
         self.medianArray = np.ndarray(outshape, dtype=np.float32)
 
+        if doGlidingProjection:
+            for inframe in range(startFrame, stopFrame-frameSamplingInterval+1):
 
-        for inframe in range(startFrame, stopFrame-frameSamplingInterval+1):
+                # median of frames n1,n2,n3...
+                frame_to_store = np.median(arr[inframe:inframe + frameSamplingInterval], axis=0).astype(np.float32)
 
-            # median of frames n1,n2,n3...
-            frame_to_store = np.median(arr[inframe:inframe + frameSamplingInterval], axis=0).astype(np.float32)
+                self.medianArray[outframe] = frame_to_store
+                outframe += 1
+        else:
+            for inframe in range(startFrame, stopFrame, frameSamplingInterval):
+                # median of frames n1,n2,n3...
+                frame_to_store = np.median(arr[inframe:inframe + frameSamplingInterval], axis=0).astype(np.float32)
 
-            self.medianArray[outframe] = frame_to_store
-            outframe += 1
+                self.medianArray[outframe] = frame_to_store
+                outframe += 1
 
         return 1
 
