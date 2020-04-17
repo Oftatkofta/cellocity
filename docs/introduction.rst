@@ -16,13 +16,13 @@ Cellocity is an bioimage analysis tool for quantifying confluent cell dynamics. 
 Cellocity development history
 -----------------------------
 
-Cellocity has been developed over multiple years and several projects. The nucleus was developed at `Stig Ove Bøe's <https://ous-research.no/home/boe/Group+members/10831>`_ research group at Oslo University Hospital and at the `Nanoscopy Gaustad <https://www.med.uio.no/english/research/core-facilities/advanced-light-microscopy-gaustad/>`_ imaging core facility at the University of Oslo. Many of Cellocity's core algorithm implementations and methods, such as the 5-sigma correlation length analysis, were presented in a `Nature Communications <https://www.nature.com/articles/s41467-018-05578-7>`_ publication in 2018.
+Cellocity has been developed over multiple years and several projects. The nucleus was developed at `Stig Ove Bøe's <https://ous-research.no/home/boe/Group+members/10831>`_ research group at Oslo University Hospital and at the `Nanoscopy Gaustad <https://www.med.uio.no/english/research/core-facilities/advanced-light-microscopy-gaustad/>`_ imaging core facility at the University of Oslo. Many of Cellocity's core algorithm implementations and methods, such as the 5-sigma correlation length analysis, were presented in a `Nature Communications <https://www.nature.com/articles/s41467-018-05578-7>`_ publication in 2018 :cite:`Laang2018`.
 
 
 Cellocity architecture
 ----------------------
 
-Cellocity is built on top of  Christoph Gohlke's `Tifffile library <https://pypi.org/project/tifffile/>`_ and uses the ``Tifffile`` object to read input and to write output files. Cellocity also relies heavily on `OpenCV <https://opencv.org/>`_ and `OpenPIV <http://www.openpiv.net/>`_ for optical flow analysis and output visualizations. `NumPy <https://numpy.org/>`_ is used internally for image data manipulation in the form of ``numpy.ndarrays``.
+Cellocity is built on top of  Christoph Gohlke's `Tifffile library <https://pypi.org/project/tifffile/>`_ and uses the ``Tifffile`` object to read input and to write output files. Cellocity also relies heavily on `OpenCV <https://opencv.org/>`_ :cite:`Bradski2000` and `OpenPIV <http://www.openpiv.net/>`_ :cite:`Taylor2010` for optical flow analysis and output visualizations. `NumPy <https://numpy.org/>`_ :cite:`vanderWalt2011` is used internally for image data manipulation in the form of ``numpy.ndarrays``.
 
 The core element in Cellocity is the ``Channel`` object, which represents one Z-plane of one time lapse image channel. ``Channel`` objects also handle image pre-processing, such as temporal or spatial median filtering. ``Channel`` objects are then given as input to ``Analysis`` objects, which perform specific analysis on the data. ``Analysis`` objects can then, in turn, be given to ``Analyzer`` objects, which take care of performing further analysis, such as calculating the alignment index, instantaneous order parameter (:math:`{\psi}`), and correlation length.
 
@@ -36,7 +36,7 @@ Alignment Index
   See :cite:`Malinverno2017` for further details.
   
 5-:math:`{\sigma}` correlation length
-  5-:math:`{\sigma}` correlation length is a way to measure the correlation length in large vector fields. It finds the average distance at which the direction of velocities are no longer significantly different at a level of 5 standard deviations (:math:`{\sigma}`). The algorithm was originally presented and utilized in :cite:`Lang2018`. 
+  5-:math:`{\sigma}` correlation length is a way to measure the correlation length in large vector fields. It finds the average distance at which the direction of velocities are no longer significantly different at a level of 5 standard deviations (:math:`{\sigma}`). The algorithm was originally presented and utilized in :cite:`Laang2018`. 
 
 
 
@@ -65,5 +65,6 @@ Simple optical flow calculation example::
 References
 ----------
 .. bibliography:: bibliography.bib
+   :style: alpha
    :cited:
    
