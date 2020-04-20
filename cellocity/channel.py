@@ -41,26 +41,56 @@ class Channel(object):
         self.tif = tiffFile
         self.name = name
         self.tif_ij_metadata = tifffile.imagej_metadata
-        self.pxSize_um, self.finterval_ms = self._read_px_size_and_finteval() #frame interval from settings, not actual
-        self.elapsedTimes_ms = [] #_page_extractor method populates this
+        self.pxSize_um = self._read_px_size()
+        self.finterval_ms = self._read_finteval() #frame interval from settings, maybe not actual
         self.pages = self._page_extractor()
+        self.elapsedTimes_ms = self._extractElapsedTimes() # only MM files have real values, IJ files trust finterval
         self.array = np.empty((0)) # getArray populates this when called
         self.actualFrameIntervals_ms = None #getActualFrameIntervals_ms populates this when called
-        self.medianArray = np.empty((0)) # getTemporalMedianFilterArray populates when called
-        self.frameSamplingInterval = None # getTemporalMedianFilterArray populates when called
 
+    def _extractElapsedTimes(self):
+        """
+        Returns a list of elapsed times in ms from the start of image acquisition.
+
+        Values are extracted from image MM metadata timestamps. Note that this is only possible for MicroManager based
+        Channels (and other timestamped formats). Since ImageJ does not store this information, the frame interval value
+        is trusted and used to calculate elapsed times.
+
+        :return: Timestamps of channel frames from the start of the acquisition.
+        :rtype: list
+
+        """
+        out = []
+
+        if self.tif.is_micromanager:
+
+            for page in self.pages:
+                self.out.append(page.tags["MicroManagerMetadata"].value["ElapsedTime-ms"])
+
+            return out
+
+        else:
+            elapsed = 0
+            for i in len(self.pages):
+                out.append(elapsed)
+                elapsed += self.finterval_ms
+
+            return out
 
     def _page_extractor(self):
         """
-        Tifffile objects reads the actual TIF image data together with the TIF-tags from disk and encapsulates them in
-        TiffPage objecs. The TiffPages that make up the channel data are read in this method.
+        Decides which TiffPages from the Tiffile belon to the channel and stores them in self.pages
+
+        Tifffile objects read the actual TIF image data together with the associated TIF-tags from disk and
+        encapsulates them in TiffPage objects. The TiffPages that make up the channel data are read and stored in this
+        method.
 
         Tifffile has an option to read TiffFrame objects instead of TiffPage objects. TiffFrames are light weight
         versions of TiffPages, but they do not contain any TIF-tags. This method ensures that TiffPages are returned by
         setting Tifffile.pages.useframes to _False_.
 
-        :return: (list) TiffPage objects corresponding to the chosen slice and channel
-
+        :return: TiffPage objects corresponding to the chosen slice and channel
+        :rtype: list
         """
 
         self.tif.pages.useframes = False  # TiffFrames can't be used for extracting metadata
@@ -72,7 +102,7 @@ class Channel(object):
             channelMap = self.tif.micromanager_metadata["IndexMap"]["Channel"]
 
         elif self.tif.is_imagej:
-            elapsed = 0
+
             indexMap = self._ij_pagemapper()
             sliceMap = indexMap[1]
             channelMap = indexMap[0]
@@ -82,16 +112,12 @@ class Channel(object):
             if (sliceMap[i] == self.sliceIdx) and (channelMap[i] == self.chIndex):
                 page = self.tif.pages[i]
                 out.append(page)
-                if self.tif.is_micromanager:
-                    self.elapsedTimes_ms.append(page.tags["MicroManagerMetadata"].value["ElapsedTime-ms"])
-                else:
-                    self.elapsedTimes_ms.append(elapsed)
-                    elapsed += self.finterval_ms
+
         return out
 
     def _ij_pagemapper(self):
         """
-        Helper function to make maps for sorting IJ Pages in to slices and channels.
+        Helper method to make maps for sorting IJ Pages in to slices and channels.
 
         :returns: (channelMap, sliceMap, frameMap) which are lists of integers describing which channel,
         slice, frame each Tiff-Page belongs to. Indexes start at 0.
@@ -99,7 +125,7 @@ class Channel(object):
         """
         nChannels = self.tif.imagej_metadata.get('channels', 1)
         nSlices = self.tif.imagej_metadata.get('slices', 1)
-        nFrames = self.tif.imagej_metadata.get('frames', None)
+        #nFrames = self.tif.imagej_metadata.get('frames', None)
 
         channelMap = []
         sliceMap = []
@@ -117,26 +143,103 @@ class Channel(object):
 
         return channelMap, sliceMap, frameMap
 
-    def _read_px_size_and_finteval(self):
+    def _read_px_size(self):
         """
+        Reads and returns pixel size from metadata
+
+        If Channel is based on a MicroManager tif, then pixel size is read from micromanager_metadata.
+        Pixel size is read from tif.micromanager_metadata['Summary']['PixelSize_um'] in versions  1.4 and 2.0-gamma,
+        but from tif.micromanager_metadata['PixelSize_um'] in 2.0-beta. See docstring for self._read_finterval() for
+        further information.
+
+        If Channel is based on an ImageJ tif file, then pixel size is read from the XResolution tif tag, and the
+        unit is derived from ij_metadata. The method will do its best to transform the size unit in to microns.
+
+        The following size unit strings are detected:
+            centimeter_strings = ['cm', 'centimeter', 'centimeters']
+            millimeter_strings = ['mm', 'millimeter', 'millimeters']
+            micrometer_strings = ['\\u00B5m', 'um', 'micrometer', 'micron']
+
+        :return: pixel size in um
+        :rtype: float
+        """
+        if self.tif.is_micromanager:
+            # if the file is a MM file this branch determines which version
+            one4_regex = re.compile("1\.4\.[\d]")  # matches 1.4.digit
+            gamma_regex = re.compile("gamma")      # matches "gamma"
+            beta_regex = re.compile("beta")        # matches "beta"
+
+            version = self.tif.micromanager_metadata["Summary"]["MicroManagerVersion"]
+
+            if (re.search(beta_regex, version) != None):
+                px_size_um = self.tif.micromanager_metadata['PixelSizeUm']
+
+                return px_size_um
+
+            elif (re.search(one4_regex, version) != None):
+                px_size_um = self.tif.micromanager_metadata['Summary']['PixelSize_um']
+
+                return px_size_um
+
+            elif (re.search(gamma_regex, version) != None):
+                px_size_um = self.tif.micromanager_metadata['Summary']['PixelSize_um']
+
+                return px_size_um
+
+        elif self.tif.is_imagej:
+            #this is not as clean due to the undocumented nature of imageJ metadata
+            #IJ uses TIF-tag to store pixel size information, but does not confer to standard unit of 'cm' or 'inch'
+
+            divisor, dividend = self.tif.pages[0].tags['XResolution'].value
+            if divisor == 0:
+                raise ValueError("Divisor is 0, something is wrong in the tif XResolution tag!")
+            px_size = float(dividend/divisor)
+
+            centimeter_strings = ['cm', 'centimeter', 'centimeters']
+            millimeter_strings = ['mm', 'millimeter', 'millimeters']
+            micrometer_strings = ['\\u00B5m', 'um', 'micrometer', 'micron']
+
+            #sz_unit defaults to µm if not set in IJ metadata
+            sz_unit = self.tif.imagej_metadata.get('unit', '\\u00B5m')
+
+            if (sz_unit in centimeter_strings):
+                px_size_um = px_size * 10 * 1000 #10 mm/cm * 1000 um/mm = 10000 um
+
+            elif (sz_unit in millimeter_strings):
+                px_size_um = px_size * 1000  # 1000 um/mm
+
+            elif (sz_unit in micrometer_strings):
+                px_size_um = px_size
+
+            return px_size_um
+
+        else:
+            return 1, 1 #defaults to pixels/frame
+
+    def _read_finterval(self):
+        """
+        Reads frame interval from metadata
+
         Determines which version of MM that was used to acquire the data, or if it is an ImageJ file.
         MM versions 1.4 and 2.0-gamma, share Metadata structure, but 2.0.0-beta is slightly different
         in where the frame interval and pixel sizes can be read from. In 2.0-beta the
         frame interval is read from tif.micromanager_metadata['Summary']['WaitInterval'],
         and in 1.4/2.0-gamma it is read from tif.micromanager_metadata['Summary']['Interval_ms']
 
-        Pixel size is read from tif.micromanager_metadata['Summary']['PixelSize_um'] in 1.4/2.0-gamma, but from
-        tif.micromanager_metadata['PixelSize_um'] in 2.0-beta
+        MM versions used for testing:
+          MicroManagerVersion 1.4.23 20180220
+          MicroManagerVersion 2.0.0-gamma1 20190527
+          MicroManagerVersion 2.0.0-beta3 20180923
 
-        MM versions used for testing>
-        MicroManagerVersion 1.4.23 20180220
-        MicroManagerVersion 2.0.0-gamma1 20190527
-        MicroManagerVersion 2.0.0-beta3 20180923
+        If the data set is from ImageJ the method will do its best to transform the time unit in to ms
 
-        :param mm_metadata: (dict) MicroManager metadata dictionary
+        The following tunit strings are detected:
+          minute_strings = ['min', 'mins', 'minutes', 'm']
+          hour_strings = ['hour', 'hours', 'h']
+          second_strings = ['seconds', 'sec', 's']
 
-        :return: (tuple) (pixel_size_um, frame_interval)
-
+        :return: pixel size in um and  frame interval as
+        :rtype: tuple
         """
         if self.tif.is_micromanager:
             # if the file is a MM file this branch determines which version
@@ -163,49 +266,86 @@ class Channel(object):
                 return px_size_um, finterval_ms
 
         elif self.tif.is_imagej:
-            #this is not as clean due to the undocumated nature of imageJ metadata
+            # this is not as clean due to the undocumented nature of imageJ metadata
 
-            #time
+            minute_strings = ['min', 'mins', 'minutes', 'm']
+            hour_strings = ['hour', 'hours', 'h']
+            second_strings = ['seconds', 'sec', 's']
+
             finterval = self.tif.imagej_metadata.get('finterval', 1)
+
+            # tunit defaults to 's' if not present in IJ-metadata
             tunit = self.tif.imagej_metadata.get('tunit', 's')
 
-            if (tunit == 'min') or (tunit == 'm'):
+            if (tunit in minute_strings):
                 finterval_ms = 60 * 1000 * finterval
 
-            elif (tunit == 'hour') or (tunit == 'h') or (tunit == 'hours'):
+            elif (tunit in hour_strings):
                 finterval_ms = 60 * 60 * 1000 * finterval
 
-            elif (tunit == 'sec') or (tunit == 's') or (tunit == 'seconds'):
+            elif (tunit in second_strings):
                 finterval_ms = 1000 * finterval
 
-            #space
-            divisor, dividend = self.tif.pages[0].tags['XResolution'].value #TODO check for 0
-            px_size = float(dividend/divisor)
+            # IJ uses TIF-tag to store pixel size information, but does not confer to standard unit of 'cm' or 'inch'
+            divisor, dividend = self.tif.pages[0].tags['XResolution'].value
+            if divisor == 0:
+                raise ValueError("Divisor is 0, something is wrong in the tif XResolution tag!")
+            px_size = float(dividend / divisor)
+
+            centimeter_strings = ['cm', 'centimeter', 'centimeters']
+            millimeter_strings = ['mm', 'millimeter', 'millimeters']
+            micrometer_strings = ['\\u00B5m', 'um', 'micrometer', 'micron']
+
+            # sz_unit defaults to µm if not set in IJ metadata
             sz_unit = self.tif.imagej_metadata.get('unit', '\\u00B5m')
 
-            if (sz_unit == 'cm'):
-                px_size_um = px_size * 10 * 1000 #10 mm/cm * 1000 um/mm = 10000 um
+            if (sz_unit in centimeter_strings):
+                px_size_um = px_size * 10 * 1000  # 10 mm/cm * 1000 um/mm = 10000 um
 
-            elif (sz_unit == 'mm'):
+            elif (sz_unit in millimeter_strings):
                 px_size_um = px_size * 1000  # 1000 um/mm
 
-            elif (sz_unit == '\\u00B5m') or (sz_unit == 'um') or (sz_unit == 'micrometer') or (sz_unit == 'micron'):
+            elif (sz_unit in micrometer_strings):
                 px_size_um = px_size
 
             return px_size_um, finterval_ms
 
         else:
-            return 1, 1 #defaults to pixels/frame
+            return 1, 1  # defaults to pixels/frame
 
     def getPages(self):
+        """
+        Returns the TiffPages that make up the channel data
+
+        :return: a list of the TiffPages extraxted from the Tifffile used to create the Channel
+        :rtype: list
+        """
 
         return self.pages
 
     def getElapsedTimes_ms(self):
+        """
+        Returns a list of elapsed times in ms from the start of image acquisition.
 
+        Values are extracted from image timestamps. Note that this is only possible for MicroManager based
+        Channels (and other timestamped formats). Since ImageJ does not store this information the frame interval value
+        is trusted and used to calculate elapsed times.
+
+        :return: Timestamps of channel frames from the start of the acquisition.
+        :rtype: list
+
+        """
         return self.elapsedTimes_ms
 
     def getArray(self):
+        """
+        Returns channel image data as a numpy array.
+
+        Method populates the array from self.pages first time it is called.
+
+        :return: Channel image data as 3D-numpy array
+        :rtype: numpy.ndarray (type depends of original format)
+        """
 
         if len(self.array) != 0:
 
@@ -225,39 +365,46 @@ class Channel(object):
 
         return out
 
-
-
-    def getTemporalMedianFilterArray(self):
+    def getTemporalMedianChannel(self, **kwargs):
         """
-        Retrurns temporal median filtered channel data.
+        Returns a new MedianChannel object where self.array has been replaced with temporal median filtered channel data
 
-        If the median filter has not been previously calculated the function will run ``doTemporalMedianFilter()``  with
-        the default settings on the full Channel array to generate it.
+        kwargs and defaults are: {doGlidingProjection = True, frameSamplingInterval=3, startFrame=0, stopFrame=None}
+        Defaults to a gliding 3 frame temporal median of the whole channel if no kwargs are given.
 
-        :return: A Nupy array of the type float32 representing the temporal median of Channel data.
-        :rtype: numpy.ndarray dtype=np.float32
+        :return: A MedianChannel object based on the current channel wher self.array has been replaced by a nupy array
+                 of the type float32 representing the temporal median of Channel data.
+        :rtype: MedianChannel
 
         """
 
-        if len(self.medianArray) == 0:
-            stopFrame = self.getArray().shape[0]
-            self.doTemporalMedianFilter(stopFrame=stopFrame)
-
-        return self.medianArray
+        return MedianChannel(self, **kwargs)
 
     def getTiffFile(self):
         '''
 
-        Returns the 'Tifffile' that the 'Channel' is based on.
+        Returns the `Tifffile` objedt that the `Channel` is based on.
 
-        :return: Tifffile-object used in Channel creation
+        :return: Tifffile-object used when Channel was created
         :rtype: object tifffile.Tifffile
+
         '''
+
         return self.tif
 
     def getActualFrameIntevals_ms(self):
-        # the intervals between frames in ms as a 1D numpy array
-        # returns None if only one frame exists or if the file is not from MicroManager
+        """
+        Returns the intervals between frames in ms as a 1D numpy array.
+
+        Note that the first value is set to 0 by definition, please consider this when calculating average actual frame
+        interval. Returns None if only one frame exists in the channel. Values are calculated the first time the method
+        is called.
+
+        :return: 1D numpy array of time intervals between frames
+        :rtype: numpy.ndarray
+
+        """
+
 
         if (self.actualFrameIntervals_ms != None):
 
@@ -276,6 +423,12 @@ class Channel(object):
             return np.asarray(out)
 
     def getIntendedFrameInterval_ms(self):
+        """
+        Returns the intended frame interval as recorded in image metadata.
+
+        :return: interval between successive frames in ms
+        :rtype: int
+        """
 
         return self.finterval_ms
 

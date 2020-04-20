@@ -31,7 +31,7 @@ The core element in Cellocity is the ``Channel`` object, which represents one Z-
 Examples of algorithms implemented
 ----------------------------------
 Instantaneous Order Parameter (:math:`{\psi}`)
-   :math:`{\psi}` = 1 corresponds to a perfectly uniform velocity field, where all the cells move in the same direction and with the same speed, while :math:`{\psi}` :math:`{\approx}`  is expected for a randomly oriented velocity field. See :cite:`Malinverno2017` for details.
+   :math:`{\psi}` = 1 corresponds to a perfectly uniform velocity field, where all the cells move in the same direction and with the same speed, while :math:`{\psi}` :math:`{\approx}` 0 is expected for a randomly oriented velocity field. See :cite:`Malinverno2017` for details.
 
 Alignment Index
   The Alignment Index describes how well each vector in a vector field aligns with the average velocity vector.
@@ -55,14 +55,24 @@ Simple file loading example::
 
 Simple pre-processing example::
     
-    channel_1.doTemporalMedianFilter()
+    from cellocity.channel import MedianChannel
+    
+    #3-frame gliding temporal median projection by default
+    channel_1_median = MedianChannel(channel_1)
     
 Simple optical flow calculation example::
     
     from cellocity.analysis import FarenbackAnalyzer
     
-    analysis_Ch1 = FarenbackAnalyzer(channel_1, "um/min")
+    analysis_Ch1 = FarenbackAnalyzer(channel_1_median, "um/min")
     analysis_Ch1.doFarenbackFlow()
+
+Simple analysis data redout example::
+
+    analysis_Ch1.doFlowsToSpeed()
+    analysis_Ch1.saveSpeedCVS("/path/to/savefolder")
+
+For more detailed examples please check out the tutorial section.
 
 References
 ----------
