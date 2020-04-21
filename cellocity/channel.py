@@ -65,13 +65,13 @@ class Channel(object):
         if self.tif.is_micromanager:
 
             for page in self.pages:
-                self.out.append(page.tags["MicroManagerMetadata"].value["ElapsedTime-ms"])
+                out.append(page.tags["MicroManagerMetadata"].value["ElapsedTime-ms"])
 
             return out
 
         else:
             elapsed = 0
-            for i in len(self.pages):
+            for page in self.pages:
                 out.append(elapsed)
                 elapsed += self.finterval_ms
 
@@ -147,10 +147,11 @@ class Channel(object):
         """
         Reads and returns pixel size from metadata
 
-        If Channel is based on a MicroManager tif, then pixel size is read from micromanager_metadata.
-        Pixel size is read from tif.micromanager_metadata['Summary']['PixelSize_um'] in versions  1.4 and 2.0-gamma,
-        but from tif.micromanager_metadata['PixelSize_um'] in 2.0-beta. See docstring for self._read_finterval() for
-        further information.
+        Determines which version of MM that was used to acquire the data, or if it is an ImageJ file.
+        MM versions 1.4 and 2.0-gamma, share Metadata structure, but 2.0.0-beta is slightly different
+        in where the pixel size can be read from. In 2.0-beta the pixel size is read from
+        tif.micromanager_metadata['PixelSize_um'], but in versions  1.4 and 2.0-gamma it is read from
+        tif.micromanager_metadata['Summary']['PixelSize_um']
 
         If Channel is based on an ImageJ tif file, then pixel size is read from the XResolution tif tag, and the
         unit is derived from ij_metadata. The method will do its best to transform the size unit in to microns.
@@ -172,7 +173,7 @@ class Channel(object):
             version = self.tif.micromanager_metadata["Summary"]["MicroManagerVersion"]
 
             if (re.search(beta_regex, version) != None):
-                px_size_um = self.tif.micromanager_metadata['PixelSizeUm']
+                px_size_um = self.tif.micromanager_metadata['PixelSize_um']
 
                 return px_size_um
 
@@ -214,9 +215,9 @@ class Channel(object):
             return px_size_um
 
         else:
-            return 1, 1 #defaults to pixels/frame
+            raise ValueError("No pixel size found!")
 
-    def _read_finterval(self):
+    def _read_finteval(self):
         """
         Reads frame interval from metadata
 
@@ -238,8 +239,8 @@ class Channel(object):
           hour_strings = ['hour', 'hours', 'h']
           second_strings = ['seconds', 'sec', 's']
 
-        :return: pixel size in um and  frame interval as
-        :rtype: tuple
+        :return: frame interval as recorded in metadata in milliseconds
+        :rtype: int or float
         """
         if self.tif.is_micromanager:
             # if the file is a MM file this branch determines which version
@@ -248,22 +249,22 @@ class Channel(object):
             beta_regex = re.compile("beta")
 
             version = self.tif.micromanager_metadata["Summary"]["MicroManagerVersion"]
-            px_size_um = self.tif.micromanager_metadata['PixelSizeUm']
+
 
             if (re.search(beta_regex, version) != None):
                 finterval_ms = self.tif.micromanager_metadata['Summary']['WaitInterval']
 
-                return px_size_um, finterval_ms
+                return finterval_ms
 
             elif (re.search(one4_regex, version) != None):
                 finterval_ms = self.tif.micromanager_metadata['Summary']['Interval_ms']
 
-                return px_size_um, finterval_ms
+                return finterval_ms
 
             elif (re.search(gamma_regex, version) != None):
                 finterval_ms = self.tif.micromanager_metadata['Summary']['Interval_ms']
 
-                return px_size_um, finterval_ms
+                return finterval_ms
 
         elif self.tif.is_imagej:
             # this is not as clean due to the undocumented nature of imageJ metadata
@@ -286,32 +287,10 @@ class Channel(object):
             elif (tunit in second_strings):
                 finterval_ms = 1000 * finterval
 
-            # IJ uses TIF-tag to store pixel size information, but does not confer to standard unit of 'cm' or 'inch'
-            divisor, dividend = self.tif.pages[0].tags['XResolution'].value
-            if divisor == 0:
-                raise ValueError("Divisor is 0, something is wrong in the tif XResolution tag!")
-            px_size = float(dividend / divisor)
-
-            centimeter_strings = ['cm', 'centimeter', 'centimeters']
-            millimeter_strings = ['mm', 'millimeter', 'millimeters']
-            micrometer_strings = ['\\u00B5m', 'um', 'micrometer', 'micron']
-
-            # sz_unit defaults to µm if not set in IJ metadata
-            sz_unit = self.tif.imagej_metadata.get('unit', '\\u00B5m')
-
-            if (sz_unit in centimeter_strings):
-                px_size_um = px_size * 10 * 1000  # 10 mm/cm * 1000 um/mm = 10000 um
-
-            elif (sz_unit in millimeter_strings):
-                px_size_um = px_size * 1000  # 1000 um/mm
-
-            elif (sz_unit in micrometer_strings):
-                px_size_um = px_size
-
-            return px_size_um, finterval_ms
+            return finterval_ms
 
         else:
-            return 1, 1  # defaults to pixels/frame
+            raise ValueError("No frame interval found!")
 
     def getPages(self):
         """
@@ -483,8 +462,17 @@ class MedianChannel(Channel):
         :param frameSamplingInterval: How many frames to use in temporal median projection
 
         """
-
+        #fields specific for MedianChannel
         self.parent_channnel = channel
+        self.doGlidingProjection = doGlidingProjection
+        self.frameSamplingInterval = frameSamplingInterval
+        self.startFrame = startFrame
+        if stopFrame == None:
+            self.stopFrame = len(channel.pages)
+        else:
+            self.stopFrame = stopFrame
+
+        #fields common to all Channel-type objects
         self.chIndex = self.parent_channnel.chIndex
         self.sliceIdx = self.parent_channnel.sliceIdx
         self.tif = self.parent_channnel.tif
@@ -494,14 +482,13 @@ class MedianChannel(Channel):
         self.finterval_ms = self.parent_channnel.finterval_ms
         self.elapsedTimes_ms = self._recalculate_elapsed_times()
         self.pages = self.parent_channnel.pages
-        self.array = self.doTemporalMedianFilter(startFrame, stopFrame, frameSamplingInterval)
+        self.array = self.doTemporalMedianFilter(doGlidingProjection=self.doGlidingProjection,
+                                                 startFrame=self.startFrame,
+                                                 stopFrame=self.stopFrame,
+                                                 frameSamplingInterval=self.frameSamplingInterval
+                                                 )
         self.actualFrameIntervals_ms = self.parent_channnel.getActualFrameIntevals_ms()
 
-        #fields specific for MedianChannel
-        self.doGlidingProjection = doGlidingProjection
-        self.frameSamplingInterval = frameSamplingInterval
-        self.startFrame = stopFrame
-        self.stopFrame = stopFrame
 
     def _recalculate_elapsed_times(self):
         #TODO
