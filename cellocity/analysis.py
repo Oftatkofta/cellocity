@@ -3,6 +3,7 @@ import cv2 as cv
 import os
 import pandas as pd
 import tifffile
+import warnings
 
 class Analyzer(object):
     """
@@ -42,6 +43,32 @@ class FlowAnalyzer(Analyzer):
         self.drawnFrames = None  # for output visualization
         self.scaler = self._getScaler()  # value to multiply vector lengths by to get selected unit from px/frame
 
+    def _getScaler(self):
+        """
+        Calculates a scalar value by which to scale from px/frame to um/min, um/h or um/s
+        in the unit um*frame/px*(min/h/s)
+
+        example:
+        um/px * frames/min * px/frame = um/min
+
+        :return: scaler
+        :rtype: float
+
+        """
+
+        finterval_s = self.channel.finterval_ms / 1000
+
+        if self.unit == "um/min":
+            frames_per_min = round(60 / finterval_s, 2)
+            return self.channel.pxSize_um * frames_per_min
+
+        if self.unit == "um/h":
+            frames_per_h = round(60 * 60 / finterval_s, 2)
+            return self.channel.pxSize_um * frames_per_h
+
+        if self.unit == "um/s":
+            return self.channel.pxSize_um * finterval_s
+
     def get_u_array(self):
         """
         Returns the u-component array of self.flows
@@ -51,6 +78,11 @@ class FlowAnalyzer(Analyzer):
         """
 
         return self.flows[:, :, :, 1]
+
+    def _getFlows(self):
+        if (self.flows == None):
+            warnings.warn("No flow has been calculated!")
+        return self.flows
 
     def alignment_index(self, u, v, alsoReturnMagnitudes=False):
         """
@@ -149,44 +181,6 @@ class FarenbackAnalyzer(FlowAnalyzer):
 
         super().__init__(channel, unit)
 
-    def _getScaler(self):
-        """
-        Calculates a scalar value by which to scale from px/frame to um/min, um/h or um/s
-        in the unit um*frame/px*(min/h/s)
-
-        example:
-        um/px * frames/min * px/frame = um/min
-
-        :return: (float) scaler
-
-        """
-
-        if not self.channel.doFrameIntervalSanityCheck():  # Are actual and intended frame intervals within 1%?
-            print("Replacing intended interval with actual!")
-            finterval_ms = self.channel.getActualFrameIntevals_ms().mean()
-            finterval_s = round(finterval_ms / 1000, 2)
-            frames_per_min = round(60 / finterval_s, 2)
-            self.channel.finterval_ms = finterval_ms
-
-            return self.channel.pxSize_um * frames_per_min  # um/px * frames/min * px/frame = um/min
-
-        finterval_s = self.channel.finterval_ms / 1000
-        frames_per_min = round(60 / finterval_s, 2)
-
-        if self.unit == "um/min":
-            return self.channel.pxSize_um * frames_per_min
-
-        if self.unit == "um/h":
-            frames_per_h = round(60 * 60 / finterval_s, 2)
-            return self.channel.pxSize_um * frames_per_h
-
-        if self.unit == "um/s":
-            return self.channel.pxSize_um * finterval_s
-
-    def _getFlows(self):
-        if (self.flows == None):
-            warnings.warn("No flow has been calculated!")
-        return self.flows
 
     def doFarenbackFlow(self, pyr_scale=0.5, levels=3, winsize=15, iterations=3, poly_n=5, poly_sigma=1.2, flags=0):
         """
@@ -197,7 +191,7 @@ class FarenbackAnalyzer(FlowAnalyzer):
 
         """
 
-        arr = self.channel.getTemporalMedianFilterArray()
+        arr = self.channel.array
 
         # Create empty array for speed
         self.flows = np.empty((arr.shape[0] - 1, arr.shape[1], arr.shape[2], 2), dtype=np.float32)
@@ -505,7 +499,7 @@ def analyzeFiles(fnamelist, outdir, flowkwargs, scalebarFlag, scalebarLength, ch
                 print("Start median filter of the other channel ...")
                 Ch1.getTemporalMedianFilterArray()
                 Ch1.medianArray = normalization_to_8bit(Ch1.medianArray, lowPcClip=10, highPcClip=0)
-                Ch1.rehapeMedianFramesTo6d()
+                Ch1.rehapeArrayTo6D()
 
                 savename = os.path.join(outdir, lab + "_2Chan_flow.tif")
                 # print(Analysis_Ch0.drawnFrames.shape, Ch1.medianArray[:stopframe-3].shape)

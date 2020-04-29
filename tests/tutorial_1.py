@@ -80,7 +80,7 @@ with tifffile.TiffFile(my_filename, multifile=False) as tif:
         print("Start median filter of the other channel ...")
         Ch1.getTemporalMedianFilterArray()
         Ch1.medianArray = normalization_to_8bit(Ch1.medianArray, lowPcClip=10, highPcClip=0)
-        Ch1.rehapeMedianFramesTo6d()
+        Ch1.rehapeArrayTo6D()
 
         savename = os.path.join(outdir, label + "_2Chan_flow.tif")
         # print(Analysis_Ch0.drawnFrames.shape, Ch1.medianArray[:stopframe-3].shape)

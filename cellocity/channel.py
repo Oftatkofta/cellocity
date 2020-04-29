@@ -292,6 +292,23 @@ class Channel(object):
         else:
             raise ValueError("No frame interval found!")
 
+    def fixFrameInterval(self):
+        """
+        Replaces the intended frame interval with the actual.
+
+        Use this method in case the self.doFrameIntervalSanityCheck() method fails. The method overwrites the intended
+        frame interval stored in self.finterval_ms with the actual, as calculated from the mean of all time stamp
+        deltas.
+
+        :return: New frame interval
+        :rtype: float
+        """
+
+        finterval_ms = self.getActualFrameIntevals_ms().mean()
+        self.finterval_ms = finterval_ms
+
+        return finterval_ms
+
     def getPages(self):
         """
         Returns the TiffPages that make up the channel data
@@ -419,7 +436,8 @@ class Channel(object):
         stamps. If the mean difference is more than maxDiff the function returns ``False``. Defaults to allowing a
         1% difference between mean actual frame interval and intended frame interval by default.
 
-        :param maxDiff: Maximum allowed difference between actual frame intervals and the intended interval, expressed as a fraction.
+        :param maxDiff: Maximum allowed difference between actual frame intervals and the intended interval, expressed
+        as a fraction.
         :type maxDiff: float
         :return: True if the fraction of actual and intended frame intervals is below maxDiff.
         :rtype: bool
@@ -439,10 +457,40 @@ class Channel(object):
 
             return out
 
-    def rehapeMedianFramesTo6d(self):
+    def rehapeArrayTo6D(self):
         #reshapes 3D (t, x, y) array to (t, 1, 1, x, y, 1) for saving dimensions in TZCYXS order
-        shape = self.medianArray.shape
-        self.medianArray.shape = (shape[0], 1, 1, shape[1], shape[2], 1)
+        shape = self.array.shape
+        self.array.shape = (shape[0], 1, 1, shape[1], shape[2], 1)
+
+    def trim(self, start, stop):
+        """
+        Trims the channel from `start` frame to `stop` frame, removing pages and array pages outside the given range.
+
+        All properties are also trimmed and the Channel name is appended with "_trim_`start`:`stop`"
+
+        :param start: start frame of trim (0-indexed)
+        :type start: int
+        :param stop: stop frame of trim (not included)
+        :type stop: int
+
+        :return: None, trims Channel in place
+
+        """
+
+        self.pages = self.pages[start:stop]
+        self.elapsedTimes_ms = self._extractElapsedTimes()
+        self.name = self.name+"_trim_"+str(start)+":"+str(stop)
+
+        #recalculate array
+        outshape = (len(self.pages), self.pages[0].shape[0], self.pages[0].shape[1])
+        outType = self.pages[0].asarray().dtype
+        out = np.empty(outshape, outType)
+
+        for i in range(len(self.pages)):
+            out[i] = self.pages[i].asarray()
+
+        self.array = out
+
 
 class MedianChannel(Channel):
     """
@@ -482,11 +530,11 @@ class MedianChannel(Channel):
         self.finterval_ms = self.parent_channnel.finterval_ms
         self.elapsedTimes_ms = self._recalculate_elapsed_times()
         self.pages = self.parent_channnel.pages
-        self.array = self.doTemporalMedianFilter(doGlidingProjection=self.doGlidingProjection,
-                                                 startFrame=self.startFrame,
-                                                 stopFrame=self.stopFrame,
-                                                 frameSamplingInterval=self.frameSamplingInterval
-                                                 )
+        self.array = self.getTemporalMedianFilter(doGlidingProjection=self.doGlidingProjection,
+                                                  startFrame=self.startFrame,
+                                                  stopFrame=self.stopFrame,
+                                                  frameSamplingInterval=self.frameSamplingInterval
+                                                  )
         self.actualFrameIntervals_ms = self.parent_channnel.getActualFrameIntevals_ms()
 
 
@@ -494,10 +542,10 @@ class MedianChannel(Channel):
         #TODO
         return []
 
-    def doTemporalMedianFilter(self, doGlidingProjection, startFrame, stopFrame,
-                               frameSamplingInterval):
+    def getTemporalMedianFilter(self, doGlidingProjection, startFrame, stopFrame,
+                                frameSamplingInterval):
         """
-        Calculates a temporal median filter of the Channel.
+        Returns a temporal median filter of the parent Channel.
 
         The function runs a gliding N-frame temporal median on every pixel to
         smooth out noise and to remove fast moving debris that is not migrating
@@ -512,8 +560,8 @@ class MedianChannel(Channel):
         :param frameSamplingInterval: Do median projection every N frames.
         :type frameSamplingInterval: int
 
-        :return: 1 if successful.
-        :rtype: bool
+        :return: Numpy array
+        :rtype: numpt.ndarray
 
 
         """
@@ -537,8 +585,9 @@ class MedianChannel(Channel):
 
         outshape = (nr_outframes, arr.shape[1], arr.shape[2])
         outframe = 0
+
         # Filling a pre-created array is computationally cheaper
-        self.medianArray = np.ndarray(outshape, dtype=np.float32)
+        out = np.ndarray(outshape, dtype=np.float32)
 
         if doGlidingProjection:
             for inframe in range(startFrame, stopFrame-frameSamplingInterval+1):
@@ -546,17 +595,21 @@ class MedianChannel(Channel):
                 # median of frames n1,n2,n3...
                 frame_to_store = np.median(arr[inframe:inframe + frameSamplingInterval], axis=0).astype(np.float32)
 
-                self.medianArray[outframe] = frame_to_store
+                out[outframe] = frame_to_store
                 outframe += 1
         else:
             for inframe in range(startFrame, stopFrame, frameSamplingInterval):
                 # median of frames n1,n2,n3...
                 frame_to_store = np.median(arr[inframe:inframe + frameSamplingInterval], axis=0).astype(np.float32)
 
-                self.medianArray[outframe] = frame_to_store
+                if outframe > nr_outframes-1:
+                    break
+                out[outframe] = frame_to_store
                 outframe += 1
 
-        return 1
+
+
+        return out
 
 
 def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
