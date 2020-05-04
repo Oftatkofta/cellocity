@@ -1,6 +1,7 @@
 import numpy as np
 import tifffile.tifffile as tifffile
 import re
+import statistics
 import cv2 as cv
 import time
 import os
@@ -506,15 +507,26 @@ class MedianChannel(Channel):
     def __init__(self, channel, doGlidingProjection = True, frameSamplingInterval=3, startFrame=0, stopFrame=None):
         """
         :param channel: Parent Channel object for the MedianChannel
-        :type channel: Channel
-        :param frameSamplingInterval: How many frames to use in temporal median projection
-
+        :type channel: Channel object
+        :param doGlidingProjection: Should a gliding projection be used? Defaults to `True`, if `False` a staggered
+        projection is performed, this will also recalculate the frame interval.
+        :type doGlidingProjection: bool
+        :param frameSamplingInterval: How many frames to use in temporal median projection, defaults to 3
+        :type frameSamplingInterval: int
+        :param startFrame: Start frame of median projection
+        :type startFrame: int
+        :param stopFrame: Stop frame of median projection (non inclusive), defaults to None i.e. all frames
+        :type stopFrame: int or None
         """
         #fields specific for MedianChannel
         self.parent_channnel = channel
+
+        assert type(doGlidingProjection) == bool, "doGlidingProjection must be a boolean"
         self.doGlidingProjection = doGlidingProjection
+
         self.frameSamplingInterval = frameSamplingInterval
         self.startFrame = startFrame
+
         if stopFrame == None:
             self.stopFrame = len(channel.pages)
         else:
@@ -527,7 +539,7 @@ class MedianChannel(Channel):
         self.name = self.parent_channnel.name
         self.tif_ij_metadata = self.parent_channnel.tif_ij_metadata
         self.pxSize_um = self.parent_channnel.pxSize_um
-        self.finterval_ms = self.parent_channnel.finterval_ms
+        self.finterval_ms = self._recalculate_finterval()
         self.elapsedTimes_ms = self._recalculate_elapsed_times()
         self.pages = self.parent_channnel.pages
         self.array = self.getTemporalMedianFilter(doGlidingProjection=self.doGlidingProjection,
@@ -535,12 +547,45 @@ class MedianChannel(Channel):
                                                   stopFrame=self.stopFrame,
                                                   frameSamplingInterval=self.frameSamplingInterval
                                                   )
-        self.actualFrameIntervals_ms = self.parent_channnel.getActualFrameIntevals_ms()
+        #self.actualFrameIntervals_ms = self.getActualFrameIntevals_ms()
 
 
     def _recalculate_elapsed_times(self):
-        #TODO
-        return []
+        """
+        Recalculates self.actualFrameIntervals_ms based on which type of median projection is performed
+
+        :param frameSamplingInterval: frame sampling interval used in median projection
+        :type frameSamplingInterval: int
+        :param doGlidingProjection: Which type of median prijection has been perfored, gliding or staggered?
+        :type doGlidingProjection: bool
+        :return: a list with the updated frame sampling intervals
+        :rtype: list
+        """
+        out = []
+        elapsed_times = self.parent_channnel.elapsedTimes_ms
+
+        if self.doGlidingProjection:
+            for i in range(self.startFrame, self.stopFrame-(self.frameSamplingInterval+1)):
+                interval = elapsed_times[i:i+self.frameSamplingInterval]
+                out.append(statistics.median(interval))
+        else:
+            nr_outframes = int((self.stopFrame - self.startFrame) / self.frameSamplingInterval)
+            for i in range(self.startFrame, self.stopFrame, self.frameSamplingInterval):
+
+                interval = elapsed_times[i:i+self.frameSamplingInterval]
+                out.append(statistics.median(interval))
+                if len(out) == nr_outframes:
+                    break
+        return out
+
+    def _recalculate_finterval(self):
+
+        if self.doGlidingProjection:
+            return self.parent_channnel.finterval_ms
+
+        else:
+            return self.parent_channnel.finterval_ms * self.frameSamplingInterval
+
 
     def getTemporalMedianFilter(self, doGlidingProjection, startFrame, stopFrame,
                                 frameSamplingInterval):
@@ -617,7 +662,7 @@ def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
     Function to rescale 16/32/64 bit arrays to 8-bit for visualizing output
 
     Defaults to saturate 0.35% of pixels, 0.175% in each end by default, which often produces nice results. This
-    is the same as pressing 'Auto' in the ImageJ contrast manager. numpy.interp() linear interpolation is used
+    is the same as pressing 'Auto' in the ImageJ contrast manager. `numpy.interp()` linear interpolation is used
     for the mapping.
 
     :param image_stack: Numpy array to be rescaled

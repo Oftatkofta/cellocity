@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import tifffile
 import warnings
+import cellocity.channel as channel
 
 class Analyzer(object):
     """
@@ -305,14 +306,14 @@ class FarenbackAnalyzer(FlowAnalyzer):
         """
 
         flows = self.flows
-        bg = self.channel.getTemporalMedianFilterArray()
+        bg = self.channel.getArray()
         outshape = (flows.shape[0], flows.shape[1], flows.shape[2])
         out = np.empty(outshape, dtype='uint8')
-        scale = kwargs["scale"]
+        scale = kwargs.get("scale", 1)
         scalebar_px = int(scale * scalebarLength / self.scaler)
 
         if bg.dtype != np.dtype('uint8'):
-            bg = normalization_to_8bit(bg)
+            bg = channel.normalization_to_8bit(bg)
 
         for i in range(out.shape[0]):
 
