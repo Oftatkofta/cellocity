@@ -24,6 +24,36 @@ class Analyzer(object):
         self.progress = 0  # 0-100 for pyQt5 progressbar
         self.unit = unit
 
+    def getProgress(self):
+        """
+        Returnas current progress in the interval 0-100.
+
+        :return: Percentage progress of analysis
+        :rtype: float
+
+        """
+        return self.progress
+
+    def updateProgress(self, increment):
+        """
+        Updates self.progress by increment
+
+        :param increment:
+        :return:
+
+        """
+
+        self.progress += increment
+        print("Progress: {:.1f} % on {}".format(self.progress, self.channel.name))
+
+    def resetProgress(self):
+        """
+        Resets progressbar to 0
+
+        :return:
+
+        """
+        self.progress = 0
 
 class FlowAnalyzer(Analyzer):
     """
@@ -70,15 +100,29 @@ class FlowAnalyzer(Analyzer):
         if self.unit == "um/s":
             return self.channel.pxSize_um * finterval_s
 
-    def get_u_array(self):
+    def get_u_array(self, frame):
         """
-        Returns the u-component array of self.flows
+        Returns the u-component array of self.flows at frame
 
-        :return: u-component of velocity vectors as a NumPy array
+        :param frame: frame to extract u-component matrix from
+        :type frame: int
+        :return: u-component of velocity vectors as a 2D NumPy array
         :rtype: numpy.ndarray
         """
 
-        return self.flows[:, :, :, 1]
+        return self.flows[frame, :, :, 0]
+
+    def get_v_array(self, frame):
+        """
+        Returns the v-component array of self.flows
+
+        :param frame: frame to extract v-component matrix from
+        :type frame: int
+        :return: v-component of velocity vectors as a 2D NumPy array
+        :rtype: numpy.ndarray
+        """
+
+        return self.flows[frame, :, :, 1]
 
     def _getFlows(self):
         if (self.flows == None):
@@ -192,12 +236,16 @@ class FarenbackAnalyzer(FlowAnalyzer):
 
         """
 
-        arr = self.channel.array
+        arr = self.channel.getArray()
 
         # Create empty array for speed
         self.flows = np.empty((arr.shape[0] - 1, arr.shape[1], arr.shape[2], 2), dtype=np.float32)
 
-        for i in range(arr.shape[0] - 1):
+        #Setup progress reporting
+        self.resetProgress()
+        progress_increment = 100 / self.flows.shape[0]
+
+        for i in range(self.flows.shape[0]):
             flow = cv.calcOpticalFlowFarneback(arr[i],
                                                arr[i + 1],
                                                None,
@@ -210,8 +258,9 @@ class FarenbackAnalyzer(FlowAnalyzer):
                                                flags)
 
             self.flows[i] = flow.astype(np.float32)
-            self.progress = 100 * i / (arr.shape[0] - 1)
-            print("Progress: {:.2f} % on {}".format(self.progress, self.channel.name))
+            self.updateProgress(progress_increment)
+
+
 
         return self.flows
 

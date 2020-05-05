@@ -305,7 +305,7 @@ class Channel(object):
         :rtype: float
         """
 
-        finterval_ms = self.getActualFrameIntevals_ms().mean()
+        finterval_ms = statistics.mean(self.getActualFrameIntevals_ms())
         self.finterval_ms = finterval_ms
 
         return finterval_ms
@@ -391,23 +391,17 @@ class Channel(object):
 
     def getActualFrameIntevals_ms(self):
         """
-        Returns the intervals between frames in ms as a 1D numpy array.
+        Returns the intervals between frames in ms as a list.
 
-        Note that the first value is set to 0 by definition, please consider this when calculating average actual frame
-        interval. Returns None if only one frame exists in the channel. Values are calculated the first time the method
-        is called.
+        Note that the length of this list is 1 shorter than the number of frames because frame intervals are calculated.
+        Returns None if only one frame exists in the channel.
 
-        :return: 1D numpy array of time intervals between frames
-        :rtype: numpy.ndarray
+        :return: list of time intervals between frames, None if self.array contains fewer than 2 frames.
+        :rtype: list
 
         """
 
-
-        if (self.actualFrameIntervals_ms != None):
-
-            return self.actualFrameIntervals_ms
-
-        elif len(self.pages) == 1:
+        if self.getArray().shape[0] < 2:
 
             return None
 
@@ -417,7 +411,8 @@ class Channel(object):
             for t in self.elapsedTimes_ms[1:]:
                 out.append(t-t0)
                 t0 = t
-            return np.asarray(out)
+
+            return out
 
     def getIntendedFrameInterval_ms(self):
         """
@@ -453,7 +448,7 @@ class Channel(object):
 
             return False
         else:
-            fract = self.getActualFrameIntevals_ms().mean()/self.getIntendedFrameInterval_ms()
+            fract = statistics.mean(self.getActualFrameIntevals_ms())/self.getIntendedFrameInterval_ms()
             out = abs(1-fract) < maxDiff
 
             return out
@@ -467,7 +462,7 @@ class Channel(object):
         """
         Trims the channel from `start` frame to `stop` frame, removing pages and array pages outside the given range.
 
-        All properties are also trimmed and the Channel name is appended with "_trim_`start`:`stop`"
+        All relevant properties are also trimmed and the Channel name is appended with "_trim-`start`:`stop`"
 
         :param start: start frame of trim (0-indexed)
         :type start: int
@@ -480,7 +475,7 @@ class Channel(object):
 
         self.pages = self.pages[start:stop]
         self.elapsedTimes_ms = self._extractElapsedTimes()
-        self.name = self.name+"_trim_"+str(start)+":"+str(stop)
+        self.name = self.name+"_trim-"+str(start)+":"+str(stop)
 
         #recalculate array
         outshape = (len(self.pages), self.pages[0].shape[0], self.pages[0].shape[1])
@@ -498,7 +493,7 @@ class MedianChannel(Channel):
     A subclass of channel where the channel array has been temporal median filtered.
 
     Temporal median filtering is very useful when performing optical flow based analysis of time lapse microscopy data
-    beacuse it filters out fast moving free-floating debree from the dataset. Note that the median array will be
+    because it filters out fast moving free-floating debree from the dataset. Note that the median array will be
     shorter than the original array. In the default case if a temporal median of 3 frames is applied, the the output
     array will contain 3-1 = 2 frames less than the input if a gliding projection (default) is performed.
 
@@ -532,40 +527,34 @@ class MedianChannel(Channel):
         else:
             self.stopFrame = stopFrame
 
-        #fields common to all Channel-type objects
-        self.chIndex = self.parent_channnel.chIndex
-        self.sliceIdx = self.parent_channnel.sliceIdx
-        self.tif = self.parent_channnel.tif
-        self.name = self.parent_channnel.name
-        self.tif_ij_metadata = self.parent_channnel.tif_ij_metadata
-        self.pxSize_um = self.parent_channnel.pxSize_um
-        self.finterval_ms = self._recalculate_finterval()
-        self.elapsedTimes_ms = self._recalculate_elapsed_times()
-        self.pages = self.parent_channnel.pages
+        new_name = self.parent_channnel.name + "_median-"+str(self.startFrame)+":"+str(self.stopFrame)
+        super().__init__(chIndex=self.parent_channnel.chIndex,
+                        tiffFile=self.parent_channnel.tif,
+                        name=new_name,
+                        sliceIndex=self.parent_channnel.sliceIdx)
+
+        #fields common to all Channel-type objects, but that need recalculation
+
         self.array = self.getTemporalMedianFilter(doGlidingProjection=self.doGlidingProjection,
                                                   startFrame=self.startFrame,
                                                   stopFrame=self.stopFrame,
                                                   frameSamplingInterval=self.frameSamplingInterval
                                                   )
-        #self.actualFrameIntervals_ms = self.getActualFrameIntevals_ms()
+        self.finterval_ms = self._recalculate_finterval()
+        self.elapsedTimes_ms = self._recalculate_elapsed_times()
+        self.actualFrameIntervals_ms = self.getActualFrameIntevals_ms()
 
 
     def _recalculate_elapsed_times(self):
         """
         Recalculates self.actualFrameIntervals_ms based on which type of median projection is performed
 
-        :param frameSamplingInterval: frame sampling interval used in median projection
-        :type frameSamplingInterval: int
-        :param doGlidingProjection: Which type of median prijection has been perfored, gliding or staggered?
-        :type doGlidingProjection: bool
-        :return: a list with the updated frame sampling intervals
-        :rtype: list
         """
         out = []
         elapsed_times = self.parent_channnel.elapsedTimes_ms
 
         if self.doGlidingProjection:
-            for i in range(self.startFrame, self.stopFrame-(self.frameSamplingInterval+1)):
+            for i in range(self.startFrame, self.stopFrame-self.frameSamplingInterval+1):
                 interval = elapsed_times[i:i+self.frameSamplingInterval]
                 out.append(statistics.median(interval))
         else:
@@ -576,6 +565,8 @@ class MedianChannel(Channel):
                 out.append(statistics.median(interval))
                 if len(out) == nr_outframes:
                     break
+
+        assert len(out) == self.array.shape[0], "Number of Time points mismatch!"
         return out
 
     def _recalculate_finterval(self):
@@ -665,7 +656,7 @@ def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
     is the same as pressing 'Auto' in the ImageJ contrast manager. `numpy.interp()` linear interpolation is used
     for the mapping.
 
-    :param image_stack: Numpy array to be rescaled
+    :param image_stack: 3D Numpy array to be rescaled
     :type image_stack: Numpy array
     :param lowPcClip: Fraction for black clipping bound
     :type lowPcClip: float

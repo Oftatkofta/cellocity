@@ -18,7 +18,7 @@ for key in tif.micromanager_metadata.keys():
 for fh in testfiles:
     print(os.path.getsize(fh), fh)
     tif = TiffFile(fh)
-    ch0 = Channel(0, tif, "test_1")
+    ch0 = Channel(0, tif, "test-1")
     ch0.trim(4,16)
 
     n = ch0.getArray()
@@ -26,9 +26,12 @@ for fh in testfiles:
     for glideFlag in [False, True]:
         print("Glideflag:", glideFlag)
         ch0_median = MedianChannel(ch0,doGlidingProjection=glideFlag, frameSamplingInterval=4)
-        print(ch0_median.getArray().shape)
+        print(len(ch0_median.elapsedTimes_ms), ch0_median.elapsedTimes_ms)
+        print(ch0_median.getActualFrameIntevals_ms(), ch0_median.getIntendedFrameInterval_ms(), ch0_median.doFrameIntervalSanityCheck())
         a_ch0 = analysis.FarenbackAnalyzer(ch0_median, "um/h")
         a_ch0.doFarenbackFlow()
+        print(a_ch0.get_u_array(0).shape)
+        print(a_ch0.get_v_array(0).shape)
         plt.imshow(a_ch0.draw_all_flow_frames()[0])
         #plt.show()
         print(a_ch0.flows.shape)
