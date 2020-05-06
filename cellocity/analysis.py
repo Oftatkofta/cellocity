@@ -8,21 +8,19 @@ import cellocity.channel as channel
 
 class Analyzer(object):
     """
-    Base object for all Analysis object types
+    Base object for all Analysis object types, handles progress updates.
 
     """
 
-    def __init__(self, channel, unit):
+    def __init__(self, channel):
         """
         :param channel: A Channel object
         :type channel: class:`channel.Channel`
-        :param unit: (str) output unit, depends on analysis
 
         """
 
         self.channel = channel
         self.progress = 0  # 0-100 for pyQt5 progressbar
-        self.unit = unit
 
     def getProgress(self):
         """
@@ -55,24 +53,29 @@ class Analyzer(object):
         """
         self.progress = 0
 
+
 class FlowAnalyzer(Analyzer):
     """
     Base object for all optical flow analysis object types.
 
     Stores UV vector components in self.flows as a (t, x, y, uv) numpy array.
-    Stores pixel speeds, scaling factors, histograms etc. Has common vector field quantificaton methods, such as
-    calcukating mean square velocity, alignment indaex, and the instantaneous order parameter.
+    Stores pixel speeds, scaling factors.
 
     """
 
     def __init__(self, channel, unit):
-        super().__init__(channel, unit)
+
+        super().__init__(channel)
+
+        self.allowed_units = ["um/s", "um/min", "um/h"]
+        assert unit in allowed_units, "unit has to be one of "+ str(self.allowed_units)
+        self.unit = unit
+        self.scaler = self._getScaler()  # value to multiply vector lengths by to get selected unit from px/frame
         self.flows = None  # (t, x, y, uv) numpy array
         self.speeds = None  # (t ,x, y) 3D numpy-array
         self.avg_speeds = None  # 1D numpy array of frame average speeds
         self.histograms = None  # populated by doFlowsToAvgSpeed if doHist = True
         self.drawnFrames = None  # for output visualization
-        self.scaler = self._getScaler()  # value to multiply vector lengths by to get selected unit from px/frame
 
     def _getScaler(self):
         """
@@ -213,19 +216,16 @@ class FlowAnalyzer(Analyzer):
 
 class FarenbackAnalyzer(FlowAnalyzer):
     """
-    Implements OpenCV's Farenbäck optical flow anaysis.
+    Performs OpenCV's Farenbäck optical flow anaysis.
 
     """
-
     def __init__(self, channel, unit):
         """
         :param channel: Channel object
         :param unit: (str) "um/s", "um/min", or "um/h"
 
         """
-
         super().__init__(channel, unit)
-
 
     def doFarenbackFlow(self, pyr_scale=0.5, levels=3, winsize=15, iterations=3, poly_n=5, poly_sigma=1.2, flags=0):
         """
@@ -263,56 +263,6 @@ class FarenbackAnalyzer(FlowAnalyzer):
 
 
         return self.flows
-
-    def doFlowsToSpeed(self, scaler=None, doAvgSpeed=False, doHist=False, nbins=10, hist_range=None):
-        """
-        Turns a (t, x, y, uv) flow numpy array with u/v component vectors in to a (t, x, y) speed array
-        populates self.speeds.
-        If doAvgSpeed is True the 1D array self.avg_speeds is also populated.
-        If doHist is True the tuple self.histograms is populated (histograms, bins) histograms are calculated with
-        nbins bins. hist_range defaults to (0, max_speed) if None
-
-        Scales all the output by multiplying with scaler, defalut output is in um/min if scaler is None
-
-        :returns self.speeds
-
-        """
-
-        if (scaler == None):
-            scaler = self.scaler
-
-        try:
-            if self.flows == None:
-                raise Exception("No flow calculated, please calculate flow first!")
-
-        except ValueError:
-            pass
-
-        out = np.square(self.flows)
-        out = out.sum(axis=3)
-        out = np.sqrt(out) * scaler
-        self.speeds = out
-
-        if doHist:
-
-            if (hist_range == None):
-                hist_range = (0, out.max())
-
-            print("Histogram range: {}".format(hist_range))
-            hists = np.ones((self.flows.shape[0], nbins), dtype=np.float32)
-
-            for i in range(self.flows.shape[0]):
-                hist = np.histogram(out[i], bins=nbins, range=hist_range, density=True)
-                hists[i] = hist[0]
-
-            bins = hist[1]
-
-            self.histograms = (hists, bins)
-
-        if doAvgSpeed:
-            self.avg_speeds = out.mean(axis=(1, 2))
-
-        return self.speeds
 
     def _draw_flow_frame(self, img, flow, step=15, scale=20, line_thicknes=2):
         h, w = img.shape[:2]
@@ -383,6 +333,99 @@ class FarenbackAnalyzer(FlowAnalyzer):
         shape = self.drawnFrames.shape
         self.drawnFrames.shape = (shape[0], 1, 1, shape[1], shape[2], 1)
 
+
+
+class OpenPivAnalyzer(FlowAnalyzer):
+    """
+    Implements OpenPIV's optical flow anaysis.
+
+    """
+
+    def __init__(self, channel, unit):
+        """
+        :param channel: Channel object
+        :param unit: (str) "um/s", "um/min", or "um/h"
+
+        """
+
+        super().__init__(channel, unit)
+
+    # TODO everything
+
+
+class Analysis(object):
+    """
+    Base object for analysis of Analysis classes
+
+    """
+
+    def __init__(self, analyzer):
+        """
+        :param analyzer: Analyzer object
+
+        """
+
+        self.analyzer = analyzer
+
+class FlowAnalysis(Analysis):
+    """
+    Base object for analysis of Flow
+
+    """
+    def __init__(self, analyzer):
+        assert type(analyzer)==FlowAnalyzer, "FlowAnalysis works on FlowAnalyzer objects!"
+        super().__init__(analyzer)
+
+    def calculateSpeeds(self, scaler=None, doAvgSpeed=False, doHist=False, nbins=10, hist_range=None):
+        """
+        Turns a (t, x, y, uv) flow numpy array with u/v component vectors in to a (t, x, y) speed array
+        populates self.speeds.
+        If doAvgSpeed is True the 1D array self.avg_speeds is also populated.
+        If doHist is True the tuple self.histograms is populated (histograms, bins) histograms are calculated with
+        nbins bins. hist_range defaults to (0, max_speed) if None
+
+        Scales all the output by multiplying with scaler, defalut output is in um/min if scaler is None
+
+        :returns self.speeds
+
+        """
+
+        if (scaler == None):
+            scaler = self.scaler
+
+        try:
+            if self.flows == None:
+                raise Exception("No flow calculated, please calculate flow first!")
+
+        except ValueError:
+            pass
+
+        out = np.square(self.flows)
+        out = out.sum(axis=3)
+        out = np.sqrt(out) * scaler
+        self.speeds = out
+
+        if doHist:
+
+            if (hist_range == None):
+                hist_range = (0, out.max())
+
+            print("Histogram range: {}".format(hist_range))
+            hists = np.ones((self.flows.shape[0], nbins), dtype=np.float32)
+
+            for i in range(self.flows.shape[0]):
+                hist = np.histogram(out[i], bins=nbins, range=hist_range, density=True)
+                hists[i] = hist[0]
+
+            bins = hist[1]
+
+            self.histograms = (hists, bins)
+
+        if doAvgSpeed:
+            self.avg_speeds = out.mean(axis=(1, 2))
+
+        return self.speeds
+
     def saveSpeedArray(self, outdir, fname=None):
         # Saves the speeds as a 32-bit tif
         shape = self.speeds.shape
@@ -421,39 +464,6 @@ class FarenbackAnalyzer(FlowAnalyzer):
         df.index.name = "Time(s)"
         saveme = os.path.join(outdir, self.channel.name + "_speeds.csv")
         df.to_csv(saveme)
-
-
-class OpenPivAnalyzer(FlowAnalyzer):
-    """
-    Implements OpenPIV's optical flow anaysis.
-
-    """
-
-    def __init__(self, channel, unit):
-        """
-        :param channel: Channel object
-        :param unit: (str) "um/s", "um/min", or "um/h"
-
-        """
-
-        super().__init__(channel, unit)
-
-    # TODO everything
-
-
-class Analysis(object):
-    """
-    Base object for analysis of Analyzer classes
-
-    """
-
-    def __init__(self, analyzer):
-        """
-        :param analyzer: Analysis object
-
-        """
-
-        self.analyzer = analyzer
 
 
 class AlignmentIndex(Analysis):

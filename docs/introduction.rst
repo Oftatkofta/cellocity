@@ -51,12 +51,14 @@ Simple file loading example::
     from tiffile import Tiffile
 
     tif = Tifffile(myFile)
-    channel_1 = Channel(0, tif, "channel name") #0-indexed channels
+    channel_1 = Channel(0, tif, "channel name") #0-indexed channels, meaning ch1 in ImageJ
 
 Simple pre-processing example::
     
     from cellocity.channel import MedianChannel
     
+    #Trim Channel to frame 2-40
+    channel_1.trim(2, 41)
     #3-frame gliding temporal median projection by default
     channel_1_median = MedianChannel(channel_1)
     

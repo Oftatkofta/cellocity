@@ -11,7 +11,7 @@ import warnings
 
 class Channel(object):
     """
-    Base Class to keep track of one channel (x,y,t) of microscopy data.
+    Base Class to keep track of one channel (t,x,y) of microscopy data.
 
     Channel Objects are created from tifffile.Tifffile and act as shallow copies of the
     TiffPage objects making up the channel,
@@ -420,6 +420,7 @@ class Channel(object):
 
         :return: interval between successive frames in ms
         :rtype: int
+
         """
 
         return self.finterval_ms
@@ -432,14 +433,12 @@ class Channel(object):
         stamps. If the mean difference is more than maxDiff the function returns ``False``. Defaults to allowing a
         1% difference between mean actual frame interval and intended frame interval by default.
 
-        :param maxDiff: Maximum allowed difference between actual frame intervals and the intended interval, expressed
-        as a fraction.
+        :param maxDiff: Maximum allowed difference between actual frame intervals and the intended interval, expressed as a fraction.
         :type maxDiff: float
         :return: True if the fraction of actual and intended frame intervals is below maxDiff.
         :rtype: bool
 
         """
-
 
         if len(self.pages) == 1:
             return None
@@ -490,11 +489,11 @@ class Channel(object):
 
 class MedianChannel(Channel):
     """
-    A subclass of channel where the channel array has been temporal median filtered.
+    A subclass of ``Channel`` where the channel array has been temporal median filtered.
 
     Temporal median filtering is very useful when performing optical flow based analysis of time lapse microscopy data
-    because it filters out fast moving free-floating debree from the dataset. Note that the median array will be
-    shorter than the original array. In the default case if a temporal median of 3 frames is applied, the the output
+    because it filters out fast moving free-floating debree from the dataset. Note that the median array will be shorter
+    than the original array. In the default case if a temporal median of 3 frames is applied, the the output
     array will contain 3-1 = 2 frames less than the input if a gliding projection (default) is performed.
 
     """
@@ -503,15 +502,15 @@ class MedianChannel(Channel):
         """
         :param channel: Parent Channel object for the MedianChannel
         :type channel: Channel object
-        :param doGlidingProjection: Should a gliding projection be used? Defaults to `True`, if `False` a staggered
-        projection is performed, this will also recalculate the frame interval.
+        :param doGlidingProjection: Should a gliding projection be used? Defaults to ``True``, if ``False`` a binned projection is performed, this will also recalculate the frame interval.
         :type doGlidingProjection: bool
         :param frameSamplingInterval: How many frames to use in temporal median projection, defaults to 3
         :type frameSamplingInterval: int
         :param startFrame: Start frame of median projection
         :type startFrame: int
-        :param stopFrame: Stop frame of median projection (non inclusive), defaults to None i.e. all frames
+        :param stopFrame: Stop frame of median projection (non inclusive), defaults to ``None`` i.e. all frames
         :type stopFrame: int or None
+
         """
         #fields specific for MedianChannel
         self.parent_channnel = channel
@@ -583,11 +582,10 @@ class MedianChannel(Channel):
         """
         Returns a temporal median filter of the parent Channel.
 
-        The function runs a gliding N-frame temporal median on every pixel to
-        smooth out noise and to remove fast moving debris that is not migrating
-        cells.
+        The function runs a gliding N-frame temporal median on every pixel to smooth out noise and to remove fast moving
+        debris that is not migrating cells.
 
-        :param doGlidingProjection: Should a gliding (default) or staggered projection be performed?
+        :param doGlidingProjection: Should a gliding (default) or binned projection be performed?
         :type doGlidingProjection: bool
         :param stopFrame: Last frame to analyze, defaults to analyzing all frames if ``None``.
         :type stopFrame: int
@@ -595,10 +593,8 @@ class MedianChannel(Channel):
         :type startFrame: int
         :param frameSamplingInterval: Do median projection every N frames.
         :type frameSamplingInterval: int
-
         :return: Numpy array
         :rtype: numpt.ndarray
-
 
         """
 
@@ -664,6 +660,7 @@ def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
     :type highPcClip: float
     :return: 8-bit numpy array of the same shape as :param image_stack:
     :rtype: numpy.dtype('uint8')
+
     """
 
 
@@ -680,6 +677,7 @@ def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
 def read_micromanager(tif):
     """
     returns metadata from a micromanager file
+
     """
     pass
 
