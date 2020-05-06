@@ -72,9 +72,6 @@ class FlowAnalyzer(Analyzer):
         self.unit = unit
         self.scaler = self._getScaler()  # value to multiply vector lengths by to get selected unit from px/frame
         self.flows = None  # (t, x, y, uv) numpy array
-        self.speeds = None  # (t ,x, y) 3D numpy-array
-        self.avg_speeds = None  # 1D numpy array of frame average speeds
-        self.histograms = None  # populated by doFlowsToAvgSpeed if doHist = True
         self.drawnFrames = None  # for output visualization
 
     def _getScaler(self):
@@ -364,67 +361,110 @@ class Analysis(object):
         :param analyzer: Analyzer object
 
         """
-
+        assert type(analyzer) == Analyzer, "Analysis needs an Analyzer object to initialize!"
         self.analyzer = analyzer
 
 class FlowAnalysis(Analysis):
     """
-    Base object for analysis of Flow
+    Base object for analysis of optical flow and PIV.
+
+    Works on FlowAnalyzer objects, such as FarenbackAnalyzer and OpenPIVAnalyzer. Needs a 4D (t, x, y, uv) numpy array
+    representing a time lapse of a vector field to initialize.
 
     """
     def __init__(self, analyzer):
         assert type(analyzer)==FlowAnalyzer, "FlowAnalysis works on FlowAnalyzer objects!"
         super().__init__(analyzer)
 
-    def calculateSpeeds(self, scaler=None, doAvgSpeed=False, doHist=False, nbins=10, hist_range=None):
+class FlowSpeedAnalysis(FlowAnalysis):
+    """
+    Handles all analysis and data output of speeds from FlowAnalyzers.
+
+    Calculates pixel-by pixel speeds from flow vectors, average speeds for frames, speed histograms.
+
+    If doAvgSpeed is True the 1D array self.avg_speeds is also populated.
+    If doHist is True the tuple self.histograms is populated (histograms, bins) histograms are calculated with
+    nbins bins. hist_range defaults to (0, max_speed) if None
+    """
+    def __init__(self, analyzer):
+        super().__init__(analyzer)
+        self.speeds = None  # (t ,x, y) 3D numpy-array
+        self.avg_speeds = None  # 1D numpy array of frame average speeds
+        self.histograms = None  # populated by calculateHistograms
+
+    def calculateSpeeds(self, scaler=None):
         """
-        Turns a (t, x, y, uv) flow numpy array with u/v component vectors in to a (t, x, y) speed array
-        populates self.speeds.
-        If doAvgSpeed is True the 1D array self.avg_speeds is also populated.
-        If doHist is True the tuple self.histograms is populated (histograms, bins) histograms are calculated with
-        nbins bins. hist_range defaults to (0, max_speed) if None
+        Calculates speeds from the flows in parent Anlayzer
 
-        Scales all the output by multiplying with scaler, defalut output is in um/min if scaler is None
+        Turns a (t, x, y, uv) flow numpy array with u/v component vectors in to a (t, x, y) speed array. Populates
+        self.speeds. Scales all the output by multiplying with scaler, defaluts to using the self.scaler from the base
+        FlowAnalyzer object if the scaler argument is ``None`` .
 
-        :returns self.speeds
+        :returns None
 
         """
 
-        if (scaler == None):
-            scaler = self.scaler
+        if scaler is None:
+            scaler = self.analyzer.scaler
 
-        try:
-            if self.flows == None:
-                raise Exception("No flow calculated, please calculate flow first!")
+        assert isinstance(scaler, (int, float)), "scaler has to be int or float!"
+        flows = self.analyzer.flows
 
-        except ValueError:
-            pass
-
-        out = np.square(self.flows)
+        out = np.square(flows)
         out = out.sum(axis=3)
         out = np.sqrt(out) * scaler
         self.speeds = out
 
-        if doHist:
+    def calculateAverageSpeeds(self):
+        """
+        Calculates the average speed for each time point in self.speeds
 
-            if (hist_range == None):
-                hist_range = (0, out.max())
+        :return: self.avg_speeds
+        :rtype: 1D numpy.ndarray of the same length as self.speeds
 
-            print("Histogram range: {}".format(hist_range))
-            hists = np.ones((self.flows.shape[0], nbins), dtype=np.float32)
+        """
+        if self.speeds is None:
+            self.calculateSpeeds()
 
-            for i in range(self.flows.shape[0]):
-                hist = np.histogram(out[i], bins=nbins, range=hist_range, density=True)
-                hists[i] = hist[0]
+        self.avg_speeds = self.speeds.mean(axis=(1, 2))
 
-            bins = hist[1]
+        return self.avg_speeds
 
-            self.histograms = (hists, bins)
+    def calculateHistograms(self, range=None, nbins=100, density=True):
+        """
+        Calculates a histogram for each frame in self.speeds
 
-        if doAvgSpeed:
-            self.avg_speeds = out.mean(axis=(1, 2))
+        :param range: Range of histogram, defaults to 0-max
+        :type range: tuple
+        :param nbins: Number of bins in histogram, defaults to 100
+        :type nbins: int
+        :param density: If ``False``, the result will contain the number of samples in each bin. If ``True`` (default),
+        the result is the value of the probability density function at the bin, normalized such that the integral over
+        the range is 1.
+        :type density: bool
 
-        return self.speeds
+        :return: self.histograms
+        :rtype: tuple (numpy.ndarray, bins)
+
+        """
+
+        if range == None:
+            range = (0, out.max())
+
+        print("Histogram range: {}".format(range))
+
+        hists = np.empty(self.flows.shape[0], nbins, dtype=np.float32)
+
+        for i in range(self.flows.shape[0]):
+            hist = np.histogram(self.speeds[i], bins=nbins, range=hist_range, density=True)
+            hists[i] = hist[0]
+
+        #bins are only stored once, because they are identical for all timepoints
+        bins = hist[1]
+
+        self.histograms = (hists, bins)
+
+        return self.histograms
 
     def saveSpeedArray(self, outdir, fname=None):
         # Saves the speeds as a 32-bit tif
