@@ -8,7 +8,7 @@ onefour = r"C:\\Users\\Jens\\Documents\\_Microscopy\\FrankenScope2\\_Pilar\\fucc
 beta = r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\_Pilar\raw_STm infection_10x__1_MMStack_MOI2.ome.tif"
 ij = r"C:\\Users\\Jens\\Documents\\_Microscopy\\FrankenScope2\\_Pilar\\fucci_GFP-geminin_RFP-cdt1_7-5min_IJ.tif"
 
-testfiles=[onefour, ij, beta]
+testfiles=[onefour, ij]
 
 tif = TiffFile(beta)
 for key in tif.micromanager_metadata.keys():
@@ -35,9 +35,9 @@ for fh in testfiles:
         speeds_ch0.calculateSpeeds()
         speeds_ch0.calculateAverageSpeeds()
         speeds_ch0.calculateHistograms()
-        plt.plot(speeds_ch0.histograms[0][0], speeds_ch0.histograms[1][1:])
 
-    plt.show()
+
+
 
 
 tif.close()

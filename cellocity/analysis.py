@@ -5,6 +5,7 @@ import pandas as pd
 import tifffile
 import warnings
 import cellocity.channel as channel
+from matplotlib import pyplot as plt
 
 class Analyzer(object):
     """
@@ -464,6 +465,26 @@ class FlowSpeedAnalysis(FlowAnalysis):
         self.histograms = (hists, bins)
 
         return self.histograms
+
+    def plotHistogram(self, frame):
+        """
+        Plots the histogram for the supplied frame.
+
+        Uses Pyplot to create a histogram plot and displays it to the user.
+
+        :param frame: frame to plot
+        :type frame: int
+
+        :return: Pyplot object
+        """
+        assert self.histograms is not None, "speed histograms have not been calculated!"
+
+        hist = self.histograms[0][frame]
+        bins = self.histograms[1]
+        width = 0.7 * (bins[1] - bins[0])
+        center = (bins[:-1] + bins[1:]) / 2
+        plt.bar(center, hist, align='center', width=width)
+        plt.show()
 
     def saveSpeedArray(self, outdir, fname=None):
         # Saves the speeds as a 32-bit tif
