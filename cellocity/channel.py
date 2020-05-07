@@ -433,7 +433,8 @@ class Channel(object):
         stamps. If the mean difference is more than maxDiff the function returns ``False``. Defaults to allowing a
         1% difference between mean actual frame interval and intended frame interval by default.
 
-        :param maxDiff: Maximum allowed difference between actual frame intervals and the intended interval, expressed as a fraction.
+        :param maxDiff: Maximum allowed difference between actual frame intervals and the intended interval, expressed
+                        as a fraction.
         :type maxDiff: float
         :return: True if the fraction of actual and intended frame intervals is below maxDiff.
         :rtype: bool
@@ -502,7 +503,8 @@ class MedianChannel(Channel):
         """
         :param channel: Parent Channel object for the MedianChannel
         :type channel: Channel object
-        :param doGlidingProjection: Should a gliding projection be used? Defaults to ``True``, if ``False`` a binned projection is performed, this will also recalculate the frame interval.
+        :param doGlidingProjection: Should a gliding projection be used? Defaults to ``True``, if ``False`` a binned
+                                    projection is performed, this will also recalculate the frame interval.
         :type doGlidingProjection: bool
         :param frameSamplingInterval: How many frames to use in temporal median projection, defaults to 3
         :type frameSamplingInterval: int

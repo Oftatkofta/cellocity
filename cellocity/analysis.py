@@ -59,16 +59,21 @@ class FlowAnalyzer(Analyzer):
     Base object for all optical flow analysis object types.
 
     Stores UV vector components in self.flows as a (t, x, y, uv) numpy array.
-    Stores pixel speeds, scaling factors.
+    Also calculates and stores a scaling factor that converts flow from pixels per frame to distance/time.
+
 
     """
 
     def __init__(self, channel, unit):
+        """
+        :param unit: must be one of ["um/s", "um/min", "um/h"]
+        :type unit: str
+        """
 
         super().__init__(channel)
 
         self.allowed_units = ["um/s", "um/min", "um/h"]
-        assert unit in allowed_units, "unit has to be one of "+ str(self.allowed_units)
+        assert unit in self.allowed_units, "unit has to be one of "+ str(self.allowed_units)
         self.unit = unit
         self.scaler = self._getScaler()  # value to multiply vector lengths by to get selected unit from px/frame
         self.flows = None  # (t, x, y, uv) numpy array
@@ -125,27 +130,25 @@ class FlowAnalyzer(Analyzer):
         return self.flows[frame, :, :, 1]
 
     def _getFlows(self):
-        if (self.flows == None):
+        if self.flows is None:
             warnings.warn("No flow has been calculated!")
         return self.flows
 
-    def alignment_index(self, u, v, alsoReturnMagnitudes=False):
+    def alignment_index(self, u, v):
         """
-        Returns an array of the same shape as u and v with the alignment index (ai), defined as in Malinverno et. al 2017.
-        For every frame the ai is the average of the dot products of the mean velocity vector with each individual
-        vector, all divided by the product of their magnitudes.
+        Returns an array of the same shape as u and v with the alignment index (ai).
 
-        If alsoReturnMagnitudes is set to True, then an additional array with the vector magnitudes, i.e, speeds in
-        pixels/frame is also returned.
+        Alignment index is defined as in Malinverno et. al 2017, for every frame the ai is the average of the dot
+        products of the mean velocity vector with each individual vector, all divided by the product of their
+        magnitudes.
 
         :param u: 2D numpy array with u component of velocity vectors
         :param v: 2D numpy array with v component of velocity vectors
-        :param alsoReturnMagnitudes: (bool) Should the function also return the vector magnitudes
         :return: nunpy array with size=input.size where every entry is the alignment index in that pixel
 
         """
 
-        assert (u.shape == v.shape) and (len(u.shape) == 2)  # Only single frames are processed
+        assert (u.shape == v.shape) and (len(u.shape) == 2), "Only single frames are processed"
 
         vector_0 = np.array((np.mean(u), np.mean(v)))
         v0_magnitude = np.linalg.norm(vector_0)
@@ -156,11 +159,7 @@ class FlowAnalyzer(Analyzer):
 
         ai = np.divide(dot_products, magnitude_products)
 
-        if alsoReturnMagnitudes:
-            return ai, vector_magnitudes
-
-        else:
-            return ai
+        return ai
 
     def rms(self, frame): #Root Mean Square Velocity
         """
@@ -361,7 +360,7 @@ class Analysis(object):
         :param analyzer: Analyzer object
 
         """
-        assert type(analyzer) == Analyzer, "Analysis needs an Analyzer object to initialize!"
+        assert isinstance(analyzer, Analyzer), "Analysis needs an Analyzer object to initialize!"
         self.analyzer = analyzer
 
 class FlowAnalysis(Analysis):
@@ -373,18 +372,15 @@ class FlowAnalysis(Analysis):
 
     """
     def __init__(self, analyzer):
-        assert type(analyzer)==FlowAnalyzer, "FlowAnalysis works on FlowAnalyzer objects!"
+        assert isinstance(analyzer, FlowAnalyzer), "FlowAnalysis works on FlowAnalyzer objects!"
         super().__init__(analyzer)
 
 class FlowSpeedAnalysis(FlowAnalysis):
     """
     Handles all analysis and data output of speeds from FlowAnalyzers.
 
-    Calculates pixel-by pixel speeds from flow vectors, average speeds for frames, speed histograms.
+    Calculates pixel-by pixel speeds from flow vectors.
 
-    If doAvgSpeed is True the 1D array self.avg_speeds is also populated.
-    If doHist is True the tuple self.histograms is populated (histograms, bins) histograms are calculated with
-    nbins bins. hist_range defaults to (0, max_speed) if None
     """
     def __init__(self, analyzer):
         super().__init__(analyzer)
@@ -430,32 +426,35 @@ class FlowSpeedAnalysis(FlowAnalysis):
 
         return self.avg_speeds
 
-    def calculateHistograms(self, range=None, nbins=100, density=True):
+    def calculateHistograms(self, hist_range=None, nbins=100, density=True):
         """
         Calculates a histogram for each frame in self.speeds
 
-        :param range: Range of histogram, defaults to 0-max
-        :type range: tuple
+        :param hist_range: Range of histogram, defaults to 0-max
+        :type hist_range: tuple
         :param nbins: Number of bins in histogram, defaults to 100
         :type nbins: int
         :param density: If ``False``, the result will contain the number of samples in each bin. If ``True`` (default),
-        the result is the value of the probability density function at the bin, normalized such that the integral over
-        the range is 1.
-        :type density: bool
+                        the result is the value of the probability density function at the bin, normalized such that the
+                        integral over the range is 1.
 
+        :type density: bool
         :return: self.histograms
         :rtype: tuple (numpy.ndarray, bins)
 
         """
 
-        if range == None:
-            range = (0, out.max())
+        if self.speeds is None:
+            self.calculateSpeeds()
 
-        print("Histogram range: {}".format(range))
+        if hist_range == None:
+            hist_range = (0, self.speeds.max())
 
-        hists = np.empty(self.flows.shape[0], nbins, dtype=np.float32)
+        print("Histogram range: {}".format(hist_range))
 
-        for i in range(self.flows.shape[0]):
+        hists = np.empty((self.speeds.shape[0], nbins), dtype=np.float32)
+
+        for i in range(self.speeds.shape[0]):
             hist = np.histogram(self.speeds[i], bins=nbins, range=hist_range, density=True)
             hists[i] = hist[0]
 

@@ -1,7 +1,6 @@
 from cellocity.channel import Channel, MedianChannel
 import cellocity.analysis as analysis
 from tifffile import TiffFile
-from pympler import asizeof
 import os
 from matplotlib import pyplot as plt
 
@@ -28,13 +27,17 @@ for fh in testfiles:
         ch0_median = MedianChannel(ch0,doGlidingProjection=glideFlag, frameSamplingInterval=4)
         print(len(ch0_median.elapsedTimes_ms), ch0_median.elapsedTimes_ms)
         print(ch0_median.getActualFrameIntevals_ms(), ch0_median.getIntendedFrameInterval_ms(), ch0_median.doFrameIntervalSanityCheck())
-        a_ch0 = analysis.FarenbackAnalyzer(ch0_median, "im/h")
+
+        a_ch0 = analysis.FarenbackAnalyzer(ch0_median, "um/h")
         a_ch0.doFarenbackFlow()
-        print(a_ch0.get_u_array(0).shape)
-        print(a_ch0.get_v_array(0).shape)
-        a_ch0.doFlowsToSpeed()
-        #plt.show()
-        print(a_ch0.flows.shape)
+        print(type(a_ch0))
+        speeds_ch0 = analysis.FlowSpeedAnalysis(a_ch0)
+        speeds_ch0.calculateSpeeds()
+        speeds_ch0.calculateAverageSpeeds()
+        speeds_ch0.calculateHistograms()
+        plt.plot(speeds_ch0.histograms[0][0], speeds_ch0.histograms[1][1:])
+
+    plt.show()
 
 
 tif.close()
