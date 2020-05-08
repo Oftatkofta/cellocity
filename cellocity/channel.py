@@ -453,16 +453,11 @@ class Channel(object):
 
             return out
 
-    def rehapeArrayTo6D(self):
-        #reshapes 3D (t, x, y) array to (t, 1, 1, x, y, 1) for saving dimensions in TZCYXS order
-        shape = self.array.shape
-        self.array.shape = (shape[0], 1, 1, shape[1], shape[2], 1)
-
     def trim(self, start, stop):
         """
         Trims the channel from `start` frame to `stop` frame, removing pages and array pages outside the given range.
 
-        All relevant properties are also trimmed and the Channel name is appended with "_trim-`start`:`stop`"
+        All relevant properties are also trimmed and the Channel name is appended with "_TRIM-'start`-`stop`"
 
         :param start: start frame of trim (0-indexed)
         :type start: int
@@ -475,7 +470,7 @@ class Channel(object):
 
         self.pages = self.pages[start:stop]
         self.elapsedTimes_ms = self._extractElapsedTimes()
-        self.name = self.name+"_trim-"+str(start)+":"+str(stop)
+        self.name = self.name+"_TRIM-"+str(start)+"-"+str(stop)
 
         #recalculate array
         outshape = (len(self.pages), self.pages[0].shape[0], self.pages[0].shape[1])
@@ -528,7 +523,7 @@ class MedianChannel(Channel):
         else:
             self.stopFrame = stopFrame
 
-        new_name = self.parent_channnel.name + "_median-"+str(self.startFrame)+":"+str(self.stopFrame)
+        new_name = self.parent_channnel.name + "_MED-"+str(self.startFrame)+"-"+str(self.stopFrame)
         super().__init__(chIndex=self.parent_channnel.chIndex,
                         tiffFile=self.parent_channnel.tif,
                         name=new_name,
@@ -675,6 +670,28 @@ def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
 
     return image_equalized.reshape(image_stack.shape).astype('uint8')
 
+def rehape3DArrayTo6D(array_3d):
+    """
+    reshapes 3D (t, x, y) array to (t, 1, 1, x, y, 1).
+
+    Used when saving ImageJ compatible tifs using ``Tifffile`` where dimensions have to be in TZCYXS order.
+    :param array_3d: 3D numpy array
+    :return:
+
+    """
+    assert len(array_3d.shape) == 3, "Must use 3D array!"
+    array_3d.shape = (array_3d.shape[0], 1, 1, array_3d.shape[1], array_3d.shape[2], 1)
+
+def reshape6DArrayTo3D(array_6D):
+    """
+    Undoes what reshape3DArrayTo6D does to the shape of the array.
+
+    :param array_6D: 6D numpy array
+    :return:
+
+    """
+    assert len(array_6d.shape) == 6, "Must use 6D array!"
+    array_6d.shape = (array_6d.shape[0], array_6d.shape[3], array_6d.shape[4])
 
 def read_micromanager(tif):
     """

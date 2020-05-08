@@ -2,6 +2,7 @@ from cellocity.channel import Channel, MedianChannel
 import cellocity.analysis as analysis
 from tifffile import TiffFile
 import os
+from pathlib import Path
 from matplotlib import pyplot as plt
 
 onefour = r"C:\\Users\\Jens\\Documents\\_Microscopy\\FrankenScope2\\_Pilar\\fucci_GFP-geminin_RFP-cdt1_7-5min_1_MMStack_Pos0.ome.tif"
@@ -35,6 +36,7 @@ for fh in testfiles:
         speeds_ch0.calculateSpeeds()
         speeds_ch0.calculateAverageSpeeds()
         speeds_ch0.calculateHistograms()
+        speeds_ch0.saveSpeedArray(Path(r"C:\Users\Jens\Desktop\temp"))
 
 
 

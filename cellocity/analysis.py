@@ -425,6 +425,8 @@ class FlowSpeedAnalysis(FlowAnalysis):
 
         self.avg_speeds = self.speeds.mean(axis=(1, 2))
 
+        self.avg_speeds.shape = self.avg_speeds.shape[0] #make sure array is 1D
+
         return self.avg_speeds
 
     def calculateHistograms(self, hist_range=None, nbins=100, density=True):
@@ -466,6 +468,34 @@ class FlowSpeedAnalysis(FlowAnalysis):
 
         return self.histograms
 
+    def getAvgSpeeds(self):
+        """
+        Returns average speed per frame as a 1D Numpy array.
+
+        :return: average speed per frame
+        :rtype: numpy.ndarray (1D)
+
+        """
+        if self.avg_speeds is None:
+            self.calculateAverageSpeeds()
+
+        return self.avg_speeds
+
+    def getSpeeds(self):
+        """
+        Returns self.speeds.
+
+        Calculates self.speeds with default values if it has not already been calculated.
+
+        :return: self.speeds as a 3D Numpy array
+        :rtype: numpy.ndarray (3D)
+
+        """
+        if self.speeds is None:
+            self.calculateSpeeds()
+
+        return self.speeds
+
     def plotHistogram(self, frame):
         """
         Plots the histogram for the supplied frame.
@@ -487,40 +517,65 @@ class FlowSpeedAnalysis(FlowAnalysis):
         plt.show()
 
     def saveSpeedArray(self, outdir, fname=None):
-        # Saves the speeds as a 32-bit tif
-        shape = self.speeds.shape
-        self.speeds.shape = (shape[0], 1, 1, shape[1], shape[2], 1)  # dimensions in TZCYXS order
+        """
+        Saves the speed array as a 32-bit tif with imageJ metadata.
+
+        Pixel intensities encode speeds in the chosen analysis unit
+
+        :param outdir: Directory to store file in
+        :type outdir: pathlib.Path
+        :param fname: Filename, defaults to Analysis channel name with appended tags +_speeds-SizeUnit-per-TimeUnit.tif
+                      if ``None``
+
+        :return: None
+        """
+
+        original_shape = self.speeds.shape
+        #imageJ hyperstacks need 6D arrays for saving
+        channel.rehape3DArrayTo6D(self.speeds)
 
         if fname == None:
-            saveme = os.path.join(outdir, self.channel.name + "_speeds.tif")
+            #Replace slash character in unit with space_per_time
+            unit =self.analyzer.unit.replace("/", "-per-")
+            fname = self.analyzer.channel.name + "_speeds-"+unit+".tif"
 
-        else:
-            saveme = os.path.join(outdir, fname)
 
-        ij_metadatasave = {'unit': 'um', 'finterval': round(self.channel.finterval_ms / 1000, 2),
-                           'tunit': "s", 'frames': shape[0],
+        saveme = outdir / fname
+
+        ij_metadatasave = {'unit': 'um', 'finterval': round(self.analyzer.channel.finterval_ms / 1000, 2),
+                           'tunit': "s", 'frames': self.speeds.shape[0],
                            'slices': 1, 'channels': 1}
 
-        tifffile.imwrite(saveme, self.speeds.astype(np.float32),
-                         imagej=True, resolution=(1 / self.channel.pxSize_um, 1 / self.channel.pxSize_um),
-                         metadata=ij_metadatasave
-                         )
+        tifffile.imwrite(file=saveme,
+                         data=self.speeds.astype(np.float32),
+                         imagej=True,
+                         resolution=(1 / self.analyzer.channel.pxSize_um, 1 / self.analyzer.channel.pxSize_um),
+                         metadata=ij_metadatasave)
 
-    def saveSpeedCSV(self, outdir):
+        #restore original array shape in case further analysis is performed
+        self.speeds.shape = original_shape
+
+    def saveSpeedCSV(self, outdir, fname=None):
+        """
+        Saves a csv of average speeds per frame in outdir.
+
+        :param outdir: Directory where output is stored
+        :type outdir: pathlib.Path
+        :param fname: filename, defaults to channel name + speeds.csv
+        :type fname: str
+        :return:
+        """
         # print("Saving csv of mean speeds...")
-        if (len(self.speeds.shape) == 6):
-            arr = np.average(self.speeds, axis=(3, 4))
 
-        else:
-            arr = np.average(self.speeds, axis=(1, 2))
+        arr = np.average(self.speeds, axis=(1, 2))
 
-        fr_interval = self.channel.frameSamplingInterval
+        fr_interval = self.analyzer.channel.finterval_ms
         arr.shape = arr.shape[0]  # make 1D
 
         timepoints_abs = np.arange(fr_interval - 1, arr.shape[0] + fr_interval - 1,
-                                   dtype='float32') * self.channel.finterval_ms / 1000
+                                   dtype='float32') * fr_interval / 1000
 
-        df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_frame_flow_" + self.unit])
+        df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_frame_flow_" + self.analyzer.unit])
         df.index.name = "Time(s)"
         saveme = os.path.join(outdir, self.channel.name + "_speeds.csv")
         df.to_csv(saveme)
