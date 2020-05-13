@@ -564,7 +564,7 @@ class FlowSpeedAnalysis(FlowAnalysis):
         #restore original array shape in case further analysis is performed
         self.speeds.shape = original_shape
 
-    def saveSpeedCSV(self, outdir, fname=None):
+    def saveSpeedCSV(self, outdir, fname=None, tunit = "s"):
         """
         Saves a csv of average speeds per frame in outdir.
 
@@ -572,19 +572,31 @@ class FlowSpeedAnalysis(FlowAnalysis):
         :type outdir: pathlib.Path
         :param fname: filename, defaults to channel name + speeds.csv
         :type fname: str
+        :param tunit: Time unit in output one of: "s", "min", "h", "days"
+        :type tunit: str
         :return:
         """
         # print("Saving csv of mean speeds...")
+
         if fname is None:
             fname = self.analyzer.channel.name + "_speeds.csv"
 
         arr = self.getAvgSpeeds()
-        fr_interval_s = self.analyzer.channel.finterval_ms / 1000
 
-        timepoints_abs = np.arange(0, arr.shape[0], dtype='float32') * fr_interval_s
+        time_multipliers = {
+            "s": 1,
+            "min": 1/60,
+            "h": 1/(60*60),
+            "days": 1/(24*60*60)
+        }
+        assert tunit in time_multipliers.keys(), "tunit has to be one of: " + str(time_multipliers.keys())
+
+        fr_interval_multiplier = time_multipliers.get(tunit) * (self.analyzer.channel.finterval_ms/1000)
+
+        timepoints_abs = np.arange(0, arr.shape[0], dtype='float32') * fr_interval_multiplier
 
         df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_frame_flow_" + self.analyzer.unit])
-        df.index.name = "Time(s)"
+        df.index.name = "Time("+tunit+")"
 
         saveme = outdir / fname
         df.to_csv(saveme)

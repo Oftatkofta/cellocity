@@ -16,7 +16,6 @@ testfiles={"one4" : onefour,
 savepath = Path(r"C:\Users\Jens\Desktop\temp")
 
 for testcase in testfiles.keys():
-    ch0.trim(4, 16)
     tif = TiffFile(testfiles[testcase])
     ch0 = Channel(0, tif, testcase)
     ch0.trim(4,16)
@@ -36,7 +35,7 @@ for testcase in testfiles.keys():
         speeds_ch0.calculateAverageSpeeds()
         speeds_ch0.calculateHistograms()
         #speeds_ch0.saveSpeedArray(savepath)
-        speeds_ch0.saveSpeedCSV(savepath,fname=speeds_ch0.getChannelName()+"glide-"+str(glideFlag)+".csv")
+        speeds_ch0.saveSpeedCSV(savepath,fname=speeds_ch0.getChannelName()+"glide-"+str(glideFlag)+".csv", tunit="min")
 
 
 
