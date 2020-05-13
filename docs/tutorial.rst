@@ -6,7 +6,7 @@ Step-by-step guide
 
 This turorial will show how to:
 
-1. Load a file and create a :class:'cellocity.channel.Channel' object. 
+1. Load a file and create a :class:`cellocity.channel.Channel` object. 
 2. Preprocess Channel object
 3. Perform analysis by creating an Analysis object from Channel object 
 4. Extract data from the Analysis object by creating an Analyzer object.
@@ -124,8 +124,33 @@ implemented. Cellocity handles all unit conversions automatically in the backgro
 	fb_analyzer_ch0 = FarenbackAnalyzer(channel = gliding_median_channel_0, unit = "um/h")
 	fb_analyzer_ch0.doFarenbackFlow()
 	
-Great, now we have calculated the optical flow of channel_0 with the default parameters.
+Great, now we have calculated the optical flow of channel_0 with the default parameters. Now its
+time to extract data. This is done by creating ``Analysis`` objects. In our case we want to analyse
+the flow speeds of our channel. To do this we can utilise the ``FlowSpeedAnalysis`` class, which works on
+``FlowAnalyzer`` objects.
 
+.. code-block:: python
+	
+	from cellocity.analysis import FlowSpeedAnalysis
+	
+	speed_analysis_ch0 = FlowSpeedAnalysis(fb_analyzer_ch0)
+	speed_analysis_ch0.calculateSpeeds()
+	speed_analysis_ch0.calculateAverageSpeeds()
+	
+When speeds have been calculated the results can be stored either as a 32-bit tif, where pixel values represent
+flow speeds in the location of the pixel, or the average speed of each frame can be saved as a .csv file for further
+processing.
+
+.. code-block:: python
+
+	from pathlib import Path
+	
+	savepath = Path("path/to/save/folder")
+	
+	speed_analysis_ch0.saveSpeedArray(outdir=savepath):
+	speed_analysis_ch0.saveSpeedCSV(outdir=savepath, fname="mySpeeds.csv", tunit="s")
+	
+That's it! If you want more detailed information, please check the :doc:`api`
 	
 	
 

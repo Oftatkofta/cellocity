@@ -13,6 +13,7 @@ Welcome to Cellocity's documentation!
    introduction
    tutorial
    developer
+   validation
    api
 
 Indices and tables
