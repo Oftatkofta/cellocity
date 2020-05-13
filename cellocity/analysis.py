@@ -364,6 +364,15 @@ class Analysis(object):
         assert isinstance(analyzer, Analyzer), "Analysis needs an Analyzer object to initialize!"
         self.analyzer = analyzer
 
+    def getChannelName(self):
+        """
+        Returns the name of the channel that the Analyzer is based on.
+
+        :return: self.name of the Channel that the base Analyzer is based on.
+        :rtype: str
+        """
+        return self.analyzer.channel.name
+
 class FlowAnalysis(Analysis):
     """
     Base object for analysis of optical flow and PIV.
@@ -566,18 +575,18 @@ class FlowSpeedAnalysis(FlowAnalysis):
         :return:
         """
         # print("Saving csv of mean speeds...")
+        if fname is None:
+            fname = self.analyzer.channel.name + "_speeds.csv"
 
-        arr = np.average(self.speeds, axis=(1, 2))
+        arr = self.getAvgSpeeds()
+        fr_interval_s = self.analyzer.channel.finterval_ms / 1000
 
-        fr_interval = self.analyzer.channel.finterval_ms
-        arr.shape = arr.shape[0]  # make 1D
-
-        timepoints_abs = np.arange(fr_interval - 1, arr.shape[0] + fr_interval - 1,
-                                   dtype='float32') * fr_interval / 1000
+        timepoints_abs = np.arange(0, arr.shape[0], dtype='float32') * fr_interval_s
 
         df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_frame_flow_" + self.analyzer.unit])
         df.index.name = "Time(s)"
-        saveme = os.path.join(outdir, self.channel.name + "_speeds.csv")
+
+        saveme = outdir / fname
         df.to_csv(saveme)
 
 
