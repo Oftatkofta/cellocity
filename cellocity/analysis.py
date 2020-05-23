@@ -240,6 +240,8 @@ class FarenbackAnalyzer(FlowAnalyzer):
 
         #Setup progress reporting
         self.resetProgress()
+
+        assert self.flows.shape[0] >= 1, "0 flow frames!"
         progress_increment = 100 / self.flows.shape[0]
 
         for i in range(self.flows.shape[0]):
@@ -261,74 +263,6 @@ class FarenbackAnalyzer(FlowAnalyzer):
 
         return self.flows
 
-    def _draw_flow_frame(self, img, flow, step=15, scale=20, line_thicknes=2):
-        h, w = img.shape[:2]
-        y, x = np.mgrid[step / 2:h:step, step / 2:w:step].reshape(2, -1).astype(int)
-        fx, fy = flow[y, x].T * scale
-        lines = np.vstack([x, y, x + fx, y + fy]).T.reshape(-1, 2, 2)
-        lines = np.int32(lines + 0.5)
-        vis = img.copy()
-        cv.polylines(vis, lines, 0, 255, line_thicknes)
-        # for (x1, y1), (_x2, _y2) in lines:
-        # radius = int(math.sqrt((x1-_x2)**2+(y1-_y2)**2))
-        # cv.circle(vis, (x1, y1), 1, 255, 1)
-
-        return vis
-
-    def _draw_scalebar(self, img, pxlength):
-        """
-        Draws a white scale bar in the bottom right corner
-
-        :param img: 2D 8-bit np array to draw on
-        :param pxlength: (int) length of scale bar in pixels
-        :return: 2D 8-bit np array image with scale bar drawn on.
-
-        """
-
-        h, w = img.shape[:2]
-        from_x = w - 32
-        from_y = h - 50
-        to_x = from_x - pxlength
-        to_y = from_y
-        vis = img.copy()
-        cv.line(vis, (from_x, from_y), (to_x, to_y), 255, 5)
-
-        return vis
-
-    def draw_all_flow_frames(self, scalebarFlag=False, scalebarLength=10, **kwargs):
-        """
-        Draws the flow on all the frames in bg with standard settings.
-
-        """
-
-        flows = self.flows
-        bg = self.channel.getArray()
-        outshape = (flows.shape[0], flows.shape[1], flows.shape[2])
-        out = np.empty(outshape, dtype='uint8')
-        scale = kwargs.get("scale", 1)
-        scalebar_px = int(scale * scalebarLength / self.scaler)
-
-        if bg.dtype != np.dtype('uint8'):
-            bg = channel.normalization_to_8bit(bg)
-
-        for i in range(out.shape[0]):
-
-            out[i] = self._draw_flow_frame(bg[i], flows[i], **kwargs)
-            if scalebarFlag:
-                out[i] = self._draw_scalebar(out[i], scalebar_px)
-
-        self.drawnFrames = out
-
-        return out
-
-    def rehapeDrawnFramesTo6d(self):
-        # reshapes 3D (t, x, y) array to (t, 1, 1, x, y, 1) for saving dimensions in TZCYXS order
-
-        if (len(self.drawnFrames.shape) == 6):
-            return None
-
-        shape = self.drawnFrames.shape
-        self.drawnFrames.shape = (shape[0], 1, 1, shape[1], shape[2], 1)
 
 
 
@@ -384,6 +318,104 @@ class FlowAnalysis(Analysis):
     def __init__(self, analyzer):
         assert isinstance(analyzer, FlowAnalyzer), "FlowAnalysis works on FlowAnalyzer objects!"
         super().__init__(analyzer)
+
+    def _draw_flow_frame(self, img, flow, step=15, scale=20, line_thicknes=2):
+        h, w = img.shape[:2]
+        y, x = np.mgrid[step / 2:h:step, step / 2:w:step].reshape(2, -1).astype(int)
+        fx, fy = flow[y, x].T * scale
+        lines = np.vstack([x, y, x + fx, y + fy]).T.reshape(-1, 2, 2)
+        lines = np.int32(lines + 0.5)
+        vis = img.copy()
+        cv.polylines(vis, lines, 0, 255, line_thicknes)
+        # for (x1, y1), (_x2, _y2) in lines:
+        # radius = int(math.sqrt((x1-_x2)**2+(y1-_y2)**2))
+        # cv.circle(vis, (x1, y1), 1, 255, 1)
+
+        return vis
+
+    def _draw_scalebar(self, img, pxlength):
+        """
+        Draws a white scale bar in the bottom right corner
+
+        :param img: 2D 8-bit np array to draw on
+        :param pxlength: (int) length of scale bar in pixels
+        :return: 2D 8-bit np array image with scale bar drawn on.
+
+        """
+
+        h, w = img.shape[:2]
+        from_x = w - 32
+        from_y = h - 50
+        to_x = from_x - pxlength
+        to_y = from_y
+        vis = img.copy()
+        cv.line(vis, (from_x, from_y), (to_x, to_y), 255, 5)
+
+        return vis
+
+    def draw_all_flow_frames_superimposed(self, scalebarFlag=False, scalebarLength=10, **kwargs):
+        """
+        Draws the flow on all the frames in bg with standard settings.
+
+        """
+
+        flows = self.analyzer._getFlows()
+        bg = self.analyzer.channel.getArray()
+        outshape = (flows.shape[0], flows.shape[1], flows.shape[2])
+        out = np.empty(outshape, dtype='uint8')
+        scale = kwargs.get("scale", 1)
+        scalebar_px = int(scale * scalebarLength / self.analyzer.scaler)
+
+        if bg.dtype != np.dtype('uint8'):
+            bg = channel.normalization_to_8bit(bg)
+
+        for i in range(out.shape[0]):
+
+            out[i] = self._draw_flow_frame(bg[i], flows[i], **kwargs)
+            if scalebarFlag:
+                out[i] = self._draw_scalebar(out[i], scalebar_px)
+
+        self.drawnFrames = out
+
+        return out
+
+    def draw_all_flow_frames(self, scalebarFlag=False, scalebarLength=10, **kwargs):
+        """
+        Draws a subset of the flow vectors on a black background
+
+        standard settings.
+
+        """
+
+        flows = self.analyzer._getFlows()
+        bg = np.zeros_like(self.analyzer.channel.getArray())
+        outshape = (flows.shape[0], flows.shape[1], flows.shape[2])
+        out = np.empty(outshape, dtype='uint8')
+        scale = kwargs.get("scale", 1)
+        scalebar_px = int(scale * scalebarLength / self.analyzer.scaler)
+
+        if bg.dtype != np.dtype('uint8'):
+            bg = channel.normalization_to_8bit(bg)
+
+        for i in range(out.shape[0]):
+
+            out[i] = self._draw_flow_frame(bg[i], flows[i], **kwargs)
+            if scalebarFlag:
+                out[i] = self._draw_scalebar(out[i], scalebar_px)
+
+        self.drawnFrames = out
+
+        return out
+
+    def rehapeDrawnFramesTo6d(self):
+        # reshapes 3D (t, x, y) array to (t, 1, 1, x, y, 1) for saving dimensions in TZCYXS order
+
+        if (len(self.drawnFrames.shape) == 6):
+            return None
+
+        shape = self.drawnFrames.shape
+        self.drawnFrames.shape = (shape[0], 1, 1, shape[1], shape[2], 1)
+
 
 class FlowSpeedAnalysis(FlowAnalysis):
     """
