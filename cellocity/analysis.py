@@ -320,6 +320,18 @@ class FlowAnalysis(Analysis):
         super().__init__(analyzer)
 
     def _draw_flow_frame(self, img, flow, step=15, scale=20, line_thicknes=2):
+        """
+        Helper function to draw flow arrows on an singe image frame
+
+        :param img: Background image (2D) of same xy shape as flow
+        :type img: numpy.ndarray
+        :param flow: 2D uv flow array (1 frame)
+        :param step: pixels between arrows
+        :param scale: length scaling of arrows
+        :param line_thicknes: thickenss of lines
+        :return: image
+        :rtype: numpy.ndarray
+        """
         h, w = img.shape[:2]
         y, x = np.mgrid[step / 2:h:step, step / 2:w:step].reshape(2, -1).astype(int)
         fx, fy = flow[y, x].T * scale
@@ -355,10 +367,21 @@ class FlowAnalysis(Analysis):
 
     def draw_all_flow_frames_superimposed(self, scalebarFlag=False, scalebarLength=10, **kwargs):
         """
-        Draws the flow on all the frames in bg with standard settings.
+        Draws flow superimposed on the background channel as an 8-bit array.
 
+        Draws a subset of the flow as lines on top of the background channel. Because the flow represents what happens
+        between frames, the flow is not drawn on the las frame of the channel, which is discarded. Creates and populates
+        self.drawnframes to store the drawn array. If the underlying channel object is 16-bit, it will converted to 8bit
+        with the `channel.normailzation_to_8bit()` function.
+
+        :param scalebarFlag: Should a scale bar be drawn on the output?
+        :type scalebarFlag: bool
+        :param scalebarLength: What speed should the scale bar represent with its length the unit is set by the unit given to the Analyzer
+        :param kwargs: Additional arguments passed to self._draw_flow_frame()
+        :type kwargs: dict
+
+        :return: 8bit numpy array
         """
-
         flows = self.analyzer._getFlows()
         bg = self.analyzer.channel.getArray()
         outshape = (flows.shape[0], flows.shape[1], flows.shape[2])
@@ -381,10 +404,20 @@ class FlowAnalysis(Analysis):
 
     def draw_all_flow_frames(self, scalebarFlag=False, scalebarLength=10, **kwargs):
         """
-        Draws a subset of the flow vectors on a black background
+        Draws flow superimposed on the background channel as an 8-bit array.
 
-        standard settings.
+        Draws a subset of the flow as lines on top of the background channel. Because the flow represents what happens
+        between frames, the flow is not drawn on the las frame of the channel, which is discarded. Creates and populates
+        self.drawnframes to store the drawn array. If the underlying channel object is 16-bit, it will converted to 8bit
+        with the `channel.normailzation_to_8bit()` function.
 
+        :param scalebarFlag: Should a scale bar be drawn on the output?
+        :type scalebarFlag: bool
+        :param scalebarLength: What speed should the scale bar represent with its length the unit is set by the unit given to the Analyzer
+        :param kwargs: Additional arguments passed to self._draw_flow_frame()
+        :type kwargs: dict
+
+        :return: 8bit numpy array
         """
 
         flows = self.analyzer._getFlows()
@@ -407,7 +440,7 @@ class FlowAnalysis(Analysis):
 
         return out
 
-    def rehapeDrawnFramesTo6d(self):
+    def _rehapeDrawnFramesTo6d(self):
         # reshapes 3D (t, x, y) array to (t, 1, 1, x, y, 1) for saving dimensions in TZCYXS order
 
         if (len(self.drawnFrames.shape) == 6):
@@ -415,6 +448,40 @@ class FlowAnalysis(Analysis):
 
         shape = self.drawnFrames.shape
         self.drawnFrames.shape = (shape[0], 1, 1, shape[1], shape[2], 1)
+
+    def saveFlowAsTif(self, outpath):
+        """
+        Saves the drawn frames as an imageJ compatible tif with rudimentary metadata.
+
+        :param outpath: Path to savefolder
+        :type outpath: Path object
+        :return: None
+        """
+        assert self.drawnFrames is not None, "No frames drawn!"
+        fname = self.getChannelName()+"_flow.tif"
+        savename = outpath / fname
+
+        self._rehapeDrawnFramesTo6d()
+        arr_to_save = self.drawnFrames
+
+        print("Saving flow...")
+
+        finterval_s = self.analyzer.channel.finterval_ms / 1000
+        ij_metadatasave = {'unit': 'um', 'finterval': finterval_s,
+                           'tunit': 's', 'Info': "None",
+                           'frames': self.analyzer.flows.shape[0],
+                           'slices': 1, 'channels': 1}
+
+        tifffile.imwrite(savename, arr_to_save.astype(np.uint8),
+                     imagej=True, resolution=(1 / self.analyzer.channel.pxSize_um, 1 / self.analyzer.channel.pxSize_um),
+                     metadata=ij_metadatasave
+                     )
+
+        print("File done!")
+
+        return
+
+
 
 
 class FlowSpeedAnalysis(FlowAnalysis):
