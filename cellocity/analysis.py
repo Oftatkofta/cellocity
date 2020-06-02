@@ -1,6 +1,6 @@
 import numpy as np
 import cv2 as cv
-import os
+import os, time
 import pandas as pd
 import tifffile
 import warnings
@@ -22,6 +22,7 @@ class Analyzer(object):
 
         self.channel = channel
         self.progress = 0  # 0-100 for pyQt5 progressbar
+        self.process_time = 0 #time taken to process
 
     def getProgress(self):
         """
@@ -232,7 +233,7 @@ class FarenbackAnalyzer(FlowAnalyzer):
         Output values need to be multiplied by a scalar to be converted to speeds.
 
         """
-
+        t0 = time.time()
         arr = self.channel.getArray()
 
         # Create empty array for speed
@@ -260,6 +261,7 @@ class FarenbackAnalyzer(FlowAnalyzer):
             self.updateProgress(progress_increment)
 
 
+        self.process_time = time.time() - t0
 
         return self.flows
 
@@ -280,8 +282,81 @@ class OpenPivAnalyzer(FlowAnalyzer):
         """
 
         super().__init__(channel, unit)
+        self.flow_coordinates = None
+        self.default_piv_params =  dict(window_size=64,
+                                        overlap=32,
+                                        dt=1,
+                                        search_area_size=70,
+                                        sig2noise_method="peak2peak")
 
-    # TODO everything
+
+    def doOpenPIV(self, **piv_params):
+        """
+        The function does PIV analysis between every frame in input ``Channel``.
+
+        It populates self.flows with the u and v components of the velocity vectors as two (smaller)
+        numpy arrays. An additional array, self.flow_coorinates, with the x and y coordinates
+        corresponding to the centers of the search windows in the original input
+        array is also also populated.
+
+        :param piv_params: parameters for the openPIV function extended_search_area_piv
+        :type piv_params: dict
+        :return: (u_component_array, v_component_array, original_x_coord_array, original_y_coord_array)
+        :rtype: tuple
+
+        """
+        if piv_params.get("window_size", None) is None:
+
+            piv_params = self.default_piv_params
+
+        from openpiv import process
+
+        arr = self.channel.getArray()
+        n_frames = arr.shape[0] - 1
+
+        #Setup progress reporting
+        self.resetProgress()
+
+        assert n_frames >= 1, "0 flow frames!"
+        progress_increment = 100 / n_frames
+
+        # original x/y coordinates
+        x, y = process.get_coordinates(image_size=arr[0].shape,
+                                            window_size=piv_params["window_size"],
+                                            overlap=piv_params["overlap"],
+                                       )
+
+        # Zero-filled output arrays are created beforehand for maximal performance
+        out_u = np.zeros((n_frames, x.shape[0], x.shape[1]))
+        out_v = np.zeros_like(out_u)
+
+        for i in range(n_frames):
+
+            #print("PIV analysis on frame %i." % (frame))
+            frame_a = arr[i]
+            frame_b = arr[i + 1]
+
+            out_u[i], out_v[i], s2n = process.extended_search_area_piv(frame_a, frame_b,
+                                                                  window_size=piv_params["window_size"],
+                                                                  overlap=piv_params["overlap"],
+                                                                  dt=piv_params["dt"],
+                                                                  search_area_size=piv_params["search_area_size"],
+                                                                  sig2noise_method=piv_params["sig2noise_method"] )
+
+            self.updateProgress(progress_increment)
+
+        #all calculated arrays have the same shape
+        shape = out_u.shape
+
+        out_u = out_u.reshape((shape[0], shape[1], shape[2], 1))
+        out_v = out_v.reshape((shape[0], shape[1], shape[2], 1))
+        x = x.reshape((shape[0], shape[1], shape[2], 1))
+        y = y.reshape((shape[0], shape[1], shape[2], 1))
+
+        self.flows = np.concatenate([out_u, out_v], axis=3)
+        self.flow_coordinates = np.concatenate([x, y], axis=3)
+
+        return self.flows, self.flow_coordinates
 
 
 class Analysis(object):
