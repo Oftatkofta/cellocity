@@ -305,11 +305,14 @@ class OpenPivAnalyzer(FlowAnalyzer):
         :rtype: tuple
 
         """
+        from openpiv import process
+
+        t0 = time.time()
+
         if piv_params.get("window_size", None) is None:
 
             piv_params = self.default_piv_params
 
-        from openpiv import process
 
         arr = self.channel.getArray()
         n_frames = arr.shape[0] - 1
@@ -332,9 +335,9 @@ class OpenPivAnalyzer(FlowAnalyzer):
 
         for i in range(n_frames):
 
-            #print("PIV analysis on frame %i." % (frame))
-            frame_a = arr[i]
-            frame_b = arr[i + 1]
+            #openPIV works on 32bit images
+            frame_a = arr[i].astype(np.int32)
+            frame_b = arr[i + 1].astype(np.int32)
 
             out_u[i], out_v[i], s2n = process.extended_search_area_piv(frame_a, frame_b,
                                                                   window_size=piv_params["window_size"],
@@ -350,11 +353,12 @@ class OpenPivAnalyzer(FlowAnalyzer):
 
         out_u = out_u.reshape((shape[0], shape[1], shape[2], 1))
         out_v = out_v.reshape((shape[0], shape[1], shape[2], 1))
-        x = x.reshape((shape[0], shape[1], shape[2], 1))
-        y = y.reshape((shape[0], shape[1], shape[2], 1))
+        x = x.reshape((shape[1], shape[2], 1))
+        y = y.reshape((shape[1], shape[2], 1))
 
-        self.flows = np.concatenate([out_u, out_v], axis=3)
-        self.flow_coordinates = np.concatenate([x, y], axis=3)
+        self.flows = np.concatenate([out_u, out_v], axis=3).astype(np.float32)
+        self.flow_coordinates = np.concatenate([x, y], axis=2).astype(np.int16)
+        self.process_time = time.time() - t0
 
         return self.flows, self.flow_coordinates
 
@@ -606,7 +610,12 @@ class FlowSpeedAnalysis(FlowAnalysis):
         if self.speeds is None:
             self.calculateSpeeds()
 
-        self.avg_speeds = self.speeds.mean(axis=(1, 2))
+        #sometiimes OpenPIV genereates NaN values
+        if np.isnan(self.speeds).any():
+            self.avg_speeds = np.nanmean(self.speeds, axis=(1, 2))
+
+        else:
+            self.avg_speeds = self.speeds.mean(axis=(1,2))
 
         self.avg_speeds.shape = self.avg_speeds.shape[0] #make sure array is 1D
 
@@ -774,6 +783,46 @@ class FlowSpeedAnalysis(FlowAnalysis):
 
         saveme = outdir / fname
         df.to_csv(saveme)
+
+    def saveSpeedCSV(self, outdir, fname=None, tunit = "s"):
+        """
+        Saves a csv of average speeds per frame in outdir.
+
+        :param outdir: Directory where output is stored
+        :type outdir: pathlib.Path
+        :param fname: filename, defaults to channel name + speeds.csv
+        :type fname: str
+        :param tunit: Time unit in output one of: "s", "min", "h", "days"
+        :type tunit: str
+        :return:
+        """
+        # print("Saving csv of mean speeds...")
+
+        if fname is None:
+            fname = self.analyzer.channel.name + "_speeds.csv"
+
+        arr = self.getAvgSpeeds()
+
+        time_multipliers = {
+            "s": 1,
+            "min": 1/60,
+            "h": 1/(60*60),
+            "days": 1/(24*60*60)
+        }
+        assert tunit in time_multipliers.keys(), "tunit has to be one of: " + str(time_multipliers.keys())
+
+        fr_interval_multiplier = time_multipliers.get(tunit) * (self.analyzer.channel.finterval_ms/1000)
+
+        timepoints_abs = np.arange(0, arr.shape[0], dtype='float32') * fr_interval_multiplier
+
+        df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_frame_flow_" + self.analyzer.unit])
+        df.index.name = "Time("+tunit+")"
+
+        saveme = outdir / fname
+        df.to_csv(saveme)
+
+
+
 
 
 class AlignmentIndex(Analysis):
