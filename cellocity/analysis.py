@@ -328,6 +328,8 @@ class OpenPivAnalyzer(FlowAnalyzer):
                                             window_size=piv_params["window_size"],
                                             overlap=piv_params["overlap"],
                                        )
+        #OpenCV places (0, 0) in upper left corner, so y-values needs to be flipped
+        y = arr.shape[2] - y
 
         # Zero-filled output arrays are created beforehand for maximal performance
         out_u = np.zeros((n_frames, x.shape[0], x.shape[1]))
@@ -345,6 +347,8 @@ class OpenPivAnalyzer(FlowAnalyzer):
                                                                   dt=piv_params["dt"],
                                                                   search_area_size=piv_params["search_area_size"],
                                                                   sig2noise_method=piv_params["sig2noise_method"] )
+            #v-array needs to be flipped
+            out_v[i] = -out_v[i]
 
             self.updateProgress(progress_increment)
 
@@ -400,7 +404,9 @@ class FlowAnalysis(Analysis):
 
     def _draw_flow_frame(self, img, flow, step=15, scale=20, line_thicknes=2):
         """
-        Helper function to draw flow arrows on an singe image frame
+        Helper function to draw flow arrows on an singe image frame.
+
+        If the flow was generated with OpenPIV, `_draw_open_piv_frame()´ will be called instead.
 
         :param img: Background image (2D) of same xy shape as flow
         :type img: numpy.ndarray
@@ -411,6 +417,10 @@ class FlowAnalysis(Analysis):
         :return: image
         :rtype: numpy.ndarray
         """
+        if type(self.analyzer) is OpenPivAnalyzer:
+
+            return self._draw_open_piv_frame(img, flow, scale, line_thicknes)
+
         h, w = img.shape[:2]
         y, x = np.mgrid[step / 2:h:step, step / 2:w:step].reshape(2, -1).astype(int)
         fx, fy = flow[y, x].T * scale
@@ -423,6 +433,37 @@ class FlowAnalysis(Analysis):
         # cv.circle(vis, (x1, y1), 1, 255, 1)
 
         return vis
+
+    def _draw_open_piv_frame(self, bg, flow, scale, line_thicknes):
+        """
+        Draws scaled optical from an OpenPIVAnalyser on background image. Visualizes the entire flow.
+
+        :param img:
+        :param flow:
+        :param scale:
+        :param line_thicknes:
+        :return:
+        """
+        #scale = kwargs.get("scale",1)
+        #line_thicknes = kwargs.get("line_thicknes", 2)
+
+        from_coord = self.analyzer.flow_coordinates
+        to_coord = np.multiply(flow, scale)
+        #replace NaN with 0, because sometime OpenPIV gives NaNs
+        to_coord = np.nan_to_num(to_coord, 0)
+        to_coord = to_coord + from_coord
+
+        vis = bg.copy()
+       # assert (to_coord.shape == from_coord.shape) and (len(to_coord) == 2), "Only single frames supported!"
+
+        for row in range(from_coord.shape[0]):
+            for col in range(from_coord.shape[1]):
+                fromX, fromY = from_coord[row][col]
+                toX, toY = to_coord[row][col]
+                cv.line(vis, (fromX, fromY), (toX, toY), (255,255,255), line_thicknes)
+
+        return vis
+
 
     def _draw_scalebar(self, img, pxlength):
         """
@@ -463,7 +504,7 @@ class FlowAnalysis(Analysis):
         """
         flows = self.analyzer._getFlows()
         bg = self.analyzer.channel.getArray()
-        outshape = (flows.shape[0], flows.shape[1], flows.shape[2])
+        outshape = (flows.shape[0], bg.shape[1], bg.shape[2])
         out = np.empty(outshape, dtype='uint8')
         scale = kwargs.get("scale", 1)
         scalebar_px = int(scale * scalebarLength / self.analyzer.scaler)
@@ -483,10 +524,10 @@ class FlowAnalysis(Analysis):
 
     def draw_all_flow_frames(self, scalebarFlag=False, scalebarLength=10, **kwargs):
         """
-        Draws flow superimposed on the background channel as an 8-bit array.
+        Draws flow on a black background as an 8-bit array.
 
-        Draws a subset of the flow as lines on top of the background channel. Because the flow represents what happens
-        between frames, the flow is not drawn on the las frame of the channel, which is discarded. Creates and populates
+        Draws a subset of the flow as lines on top of a black background. Because the flow represents what happens
+        between frames, the flow is not drawn on the last frame of the channel, which is discarded. Creates and populates
         self.drawnframes to store the drawn array. If the underlying channel object is 16-bit, it will converted to 8bit
         with the `channel.normailzation_to_8bit()` function.
 
@@ -501,13 +542,10 @@ class FlowAnalysis(Analysis):
 
         flows = self.analyzer._getFlows()
         bg = np.zeros_like(self.analyzer.channel.getArray())
-        outshape = (flows.shape[0], flows.shape[1], flows.shape[2])
+        outshape = (flows.shape[0], bg.shape[1], bg.shape[2])
         out = np.empty(outshape, dtype='uint8')
         scale = kwargs.get("scale", 1)
         scalebar_px = int(scale * scalebarLength / self.analyzer.scaler)
-
-        if bg.dtype != np.dtype('uint8'):
-            bg = channel.normalization_to_8bit(bg)
 
         for i in range(out.shape[0]):
 
@@ -537,7 +575,12 @@ class FlowAnalysis(Analysis):
         :return: None
         """
         assert self.drawnFrames is not None, "No frames drawn!"
-        fname = self.getChannelName()+"_flow.tif"
+        if type(self.analyzer)==FarenbackAnalyzer:
+            suffix = "_flow.tif"
+        if type(self.analyzer)==OpenPivAnalyzer:
+            suffix = "_PIV.tif"
+
+        fname = self.getChannelName()+suffix
         savename = outpath / fname
 
         self._rehapeDrawnFramesTo6d()
