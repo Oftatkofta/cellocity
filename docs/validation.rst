@@ -84,7 +84,7 @@ Studying the above figure allows us to get a deeper understanding of why optical
     :align: left
     :alt: Figure comparing vector visulalization from Optical Flow vs PIV
     
-    Figure showing flow vector visualization of the diagonal translation at 60X magnification. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects. Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
+    Figure showing flow vector visualization of the diagonal translation at 60X magnification. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects, ``OpenPivAnalyzer`` (left) and ``FarenbackAnalyzer`` (right). Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
 
 
 
