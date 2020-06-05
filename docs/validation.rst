@@ -88,9 +88,9 @@ Studying the above figure allows us to get a deeper understanding of why optical
 
 
 
-The reason for doing so is that optical flow and PIV analysis of transmitted light microscopy time-lapse data is commonly performed in the study of confluent cell layer dynamics phenomena, such as collective cell migration and wound healing.
+Optical flow and PIV analysis of transmitted light microscopy time-lapse data is commonly performed in the study of confluent cell layer dynamics phenomena, such as collective cell migration and wound healing.
 This is particularly relevant for studies of primary cells, due to the difficulty in reliably labelling these for cell tracking.
-To our knowledge, there has not been a evaluation of different pre-processing modalities and optical flow analysis algorithms on real-world non-simulated microscopy data.
+To our knowledge, there has not been a evaluation of different pre-processing modalities and optical flow analysis algorithms on real-world non-simulated microscopy data and we hope that others will find this software package and dataset useful.
 
  
 
