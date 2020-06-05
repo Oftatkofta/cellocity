@@ -70,7 +70,7 @@ and :math:`\sqrt{2} = 1.42` :math:`{\mu m/s}` for the X+Y translation.
 	
 Both ``Anlyzers`` produce results close to the expected, but the ``OpenPivAnalyzer`` has a tendency to underestimate the speed and has greater variance.
 
-Monolayers growing on hydrogel are seldom completely planar and portions are often out of focus during imaging. This phenomenon has also been captured in the dataset. If we draw a visulaization of the flow generated superimposed on the background ``Channel`` we can study this phenomenon on more detail.
+Monolayers growing on hydrogel are seldom completely planar and portions are often out of focus during imaging. This phenomenon has also been captured in the dataset. If we draw a visulaization of the flow generated superimposed on the background ``Channel`` we can study this phenomenon in more detail.
 	
 .. figure:: _static/40X_vector_panels_compare.png
     :align: left
@@ -79,6 +79,13 @@ Monolayers growing on hydrogel are seldom completely planar and portions are oft
     Figure showing flow vector visualization of a 600x600 crop from the bottom right corner of the final frame from the 40X magnification files in the dataset. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects. Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
 
 Studying the above figure allows us to get a deeper understanding of why optical flow and PIV differ. Note that the area in the bottom right corner is not properly focused, this causes the PIV algorithm some problem in accurately determining the flow, as illustrated by the inhomogenities in the vector field. 
+
+.. figure:: _static/60X_diagonal_compare.gif
+    :align: left
+    :alt: Figure comparing vector visulalization from Optical Flow vs PIV
+    
+    Figure showing flow vector visualization of the diagonal translation at 60X magnification. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects. Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
+
 
 
 The reason for doing so is that optical flow and PIV analysis of transmitted light microscopy time-lapse data is commonly performed in the study of confluent cell layer dynamics phenomena, such as collective cell migration and wound healing.
