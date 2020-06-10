@@ -27,7 +27,7 @@ def convertChannel(fname, finterval=1):
     :param fname: Path to file
     :param finterval: desired frame interval in output ``Channel``, defaults to 1 second
     :return: Channel
-    :rtype: cellocity.Channel
+    :rtype: channel.Channel
     """
 
     with tifffile.TiffFile(fname, multifile=False) as tif:
@@ -40,12 +40,12 @@ def convertChannel(fname, finterval=1):
 
 def convertMedianChannel(fname, finterval=1):
     """
-    Converts a mulitiposition MM file to a fake timelapse Channel with finterval second frame interval.
+    Converts a mulitiposition ome.tif MM file to a fake timelapse MedianChannel with finterval second frame interval.
 
     :param fname: Path to file
     :param finterval: desired frame interval in output ``Channel``, defaults to 1 second
-    :return: Channel
-    :rtype: cellocity.Channel
+    :return: MedianChannel
+    :rtype: channel.MedianChannel
     """
 
     with tifffile.TiffFile(fname, multifile=False) as tif:
@@ -141,6 +141,39 @@ def speedCsvToDataFrame(inpath):
 
     return alldata
 
+def toDataFrame(ch, df):
+    """
+    Generates and returns a dataframe from FlowSpeedAnalysis CSVs in inpath.
+    """
+    alldata = pd.DataFrame()
+
+    for f in inpath.iterdir():
+
+        if (f.suffix == ".csv") and f.is_file():
+            df = pd.read_csv(f, index_col=0)
+            fields = f.name.split("_")
+            analyzer = fields[0]
+            process_time = float(fields[-1][:-4])
+            magnification = fields[4]
+            displacemet = fields[5] + " " +fields[6]
+
+            if "MED" in f.name:
+                filter = "Median"
+            else:
+                filter = "None"
+
+            df["analyzer"]=analyzer
+            df["filter"]=filter
+            df["magnification"]=magnification
+            df["process_time"]=process_time
+            df["displacement"]=displacemet
+            df["filename"]=f.name
+
+            alldata = alldata.append(df)
+
+    return alldata
+
+
 def make_proces_time_plot(df):
     """
     Generates a bar plot comparing processing times for the two analyzers.
@@ -165,21 +198,44 @@ def make_speed_plot(df):
                     height=8, aspect=.7)
     return sns_plot
 
+def test_flow(ch):
+    """
+    Creates a FarenbackAnalyzer and performs optical flow calculations with default settings in um/s.
 
+    :param ch: channel.Channel
+    :return: anlysis.FarenbackAnalyzer
+    """
+    analyzer = FarenbackAnalyzer(ch, "um/s")
+    analyzer.doFarenbackFlow()
 
-def test_ai(ch, outpath):
-    a1 = FarenbackAnalyzer(ch, "um/s")
-    a1.doFarenbackFlow()
-    a2 = OpenPivAnalyzer(ch, "um/s")
-    a2.doOpenPIV()
+    return analyzer
 
-    ai1 = AlignmentIndexAnalysis(a1)
-    ai1.saveCSV(outpath)
-    ai1.saveArrayAsTif(outpath)
+def test_piv(ch):
+    """
+    Creates an openPivAnalyzer and performs optical flow calculations with default settings in um/s.
 
-    ai2 = AlignmentIndexAnalysis(a2)
-    ai2.saveCSV(outpath)
-    ai2.saveArrayAsTif(outpath)
+    :param ch: channel.Channel
+    :return: anlysis.OpenPivAnalyzer
+
+    """
+    analyzer = OpenPivAnalyzer(ch, "um/s")
+    analyzer.doOpenPIV()
+
+    return analyzer
+
+def get_ai_as_df(analyzer):
+
+    ai = AlignmentIndexAnalysis(analyzer)
+    ai.calculateAlignIdxs()
+
+    return ai.getAvgAlignIdxAsDf()
+
+def get_speed_as_df(analyzer):
+
+     = AlignmentIndexAnalysis(analyzer)
+    ai.calculateAlignIdxs()
+
+    return ai.getAvgAlignIdxAsDf()
 
 def run_validation(inpath, outpath, **kvargs):
     ch_list = make_channels(inpath)

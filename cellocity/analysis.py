@@ -550,9 +550,13 @@ class FlowSpeedAnalysis(FlowAnalysis):
 
         Turns a (t, x, y, uv) flow numpy array with u/v component vectors in to a (t, x, y) speed array. Populates
         self.speeds. Scales all the output by multiplying with scaler, defaluts to using the self.scaler from the base
-        FlowAnalyzer object if the scaler argument is ``None`` .
+        FlowAnalyzer object if the scaler argument is ``None``.
 
-        :returns None
+        self.scaler is the scalar quantity that converts flow vectors from the general unit of pixels/frame in to the
+        desired output unit, such as um/s.
+
+        :returns self.speeds
+        :rtype: numpy.ndarray
 
         """
 
@@ -566,6 +570,8 @@ class FlowSpeedAnalysis(FlowAnalysis):
         out = out.sum(axis=3)
         out = np.sqrt(out) * scaler
         self.speeds = out
+
+        return self.speeds
 
     def calculateAverageSpeeds(self):
         """
@@ -640,6 +646,23 @@ class FlowSpeedAnalysis(FlowAnalysis):
             self.calculateAverageSpeeds()
 
         return self.avg_speeds
+
+    def getAvgSpeedsAsDf(self):
+        """
+        Returns frame and average speed for the frame as a Pandas DataFrame.
+
+        :return: DataFrame with 1 column for average speed and index = frame number
+        :rtype: pandas.DataFrame
+        """
+
+        if self.avg_speeds is None:
+            self.calculateAverageSpeeds()
+
+        arr = self.getAvgSpeeds()
+
+        df = pd.DataFrame(arr, columns=["AVG_speed_" + self.analyzer.unit])
+
+        return df
 
     def getSpeeds(self):
         """
@@ -880,6 +903,23 @@ class AlignmentIndexAnalysis(FlowAnalysis):
             self.calculateAverage()
 
         return self.avg_alignment_idxs
+
+    def getAvgAlignIdxAsDf(self):
+        """
+        Returns frame and average alignment index for the frame as a Pandas DataFrame.
+
+        :return: DataFrame with 1 column for average aligmnent index and index = frame number
+        :rtype: pandas.DataFrame
+        """
+
+        if self.avg_alignment_idxs is None:
+            self.calculateAverage()
+
+        arr = self.getAvgAlignIdxs()
+
+        df = pd.DataFrame(arr, columns=["AVG_alignment_index"])
+
+        return df
 
     def saveCSV(self, outdir, fname=None, tunit="s"):
 
