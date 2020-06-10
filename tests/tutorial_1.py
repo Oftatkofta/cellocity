@@ -57,8 +57,8 @@ with tifffile.TiffFile(my_filename, multifile=False) as tif:
     print("flow finished, calculating speeds...")
     Analysis_Ch0.doFlowsToSpeed()
     print("Saving speeds...as {}_speeds.tif".format(Analysis_Ch0.channel.name))
-    Analysis_Ch0.saveSpeedArray(outdir)
-    Analysis_Ch0.saveSpeedCSV(outdir)
+    Analysis_Ch0.saveArrayAsTif(outdir)
+    Analysis_Ch0.saveCSV(outdir)
     print("Elapsed for file {:.2f} s, now drawing flow...".format(time.time() - t1))
     Analysis_Ch0.draw_all_flow_frames(scalebarFlag, scalebarLength, **flowkwargs)
 

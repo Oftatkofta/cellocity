@@ -136,81 +136,6 @@ class FlowAnalyzer(Analyzer):
             warnings.warn("No flow has been calculated!")
         return self.flows
 
-    def alignment_index(self, u, v):
-        """
-        Returns an array of the same shape as u and v with the alignment index (ai).
-
-        Alignment index is defined as in Malinverno et. al 2017, for every frame the ai is the average of the dot
-        products of the mean velocity vector with each individual vector, all divided by the product of their
-        magnitudes.
-
-        :param u: 2D numpy array with u component of velocity vectors
-        :param v: 2D numpy array with v component of velocity vectors
-        :return: nunpy array with size=input.size where every entry is the alignment index in that pixel
-
-        """
-
-        assert (u.shape == v.shape) and (len(u.shape) == 2), "Only single frames are processed"
-
-        vector_0 = np.array((np.mean(u), np.mean(v)))
-        v0_magnitude = np.linalg.norm(vector_0)
-
-        vector_magnitudes = np.sqrt((np.square(u) + np.square(v)))  # a^2 + b^2 = c^2
-        magnitude_products = vector_magnitudes * v0_magnitude
-        dot_products = u * vector_0[0] + v * vector_0[1]  # Scalar multiplication followed by array addition
-
-        ai = np.divide(dot_products, magnitude_products)
-
-        return ai
-
-    def rms(self, frame): #Root Mean Square Velocity
-        """
-        Calculates the root mean square velocity of the input frame number from optical flow data in self.flows.
-
-        rms is the speed, or vector magnitudes, in the unit pixels/frame. This is equivalent to taking the
-        square root of the mean square velocity. rms is used in the calculation of IOP.
-
-        :param frame: the number of the frame to be analyzed
-        :type frame: int
-        :return: the root mean square velocity of the velocity vectors in the frame
-        :rtype: float
-        """
-        u=self.get_u_array()
-        rms = np.sqrt(np.mean(np.square(u)+np.square(v))) #sqrt(u^2+v^2)
-
-        return rms
-
-    def smvvm(self, u, v):  # square_mean_vectorial_velocity_magnitude
-        """
-        Array addition of the squared average vector components, used in calculating the instantaneous order parameter
-
-        :param u:
-            2D numpy array with the u component of velocity vectors
-        :param v:
-            2D numpy array with the u component of velocity vectors
-        :return:
-            2D numpy array with the u component of velocity vectors
-
-        """
-
-        return np.square(np.mean(u)) + np.square(np.mean(v))
-
-    def instantaneous_order_parameter(self, u, v):
-        """
-        Calculates the instantaneous order parameter (iop) in one PIV frame see  Malinverno et. al 2017 for a more detailed
-        explanation. The iop is a measure of how similar the vectors in a field are, which takes in to account both the
-        direcions and magnitudes of the vectors. iop always between 0 and 1, with iop = 1 being a perfectly uniform field
-        of identical vectors, and iop = 0 for a perfectly random field.
-
-        :param u:
-            2D numpy array with the u component of velocity vectors
-        :param v:
-            2D numpy array with the u component of velocity vectors
-        :return:
-            (float) iop of vector field
-        """
-        return smvvm(u, v) / msv(u, v) #square_mean_vectorial_velocity_magnitude/Mean Square Velocity
-
 
 class FarenbackAnalyzer(FlowAnalyzer):
     """
@@ -751,7 +676,7 @@ class FlowSpeedAnalysis(FlowAnalysis):
         plt.bar(center, hist, align='center', width=width)
         plt.show()
 
-    def saveSpeedArray(self, outdir, fname=None):
+    def saveArrayAsTif(self, outdir, fname=None):
         """
         Saves the speed array as a 32-bit tif with imageJ metadata.
 
@@ -764,6 +689,7 @@ class FlowSpeedAnalysis(FlowAnalysis):
 
         :return: None
         """
+        assert self.speeds is not None, "Speeds not calculated!"
 
         original_shape = self.speeds.shape
         #imageJ hyperstacks need 6D arrays for saving
@@ -790,44 +716,7 @@ class FlowSpeedAnalysis(FlowAnalysis):
         #restore original array shape in case further analysis is performed
         self.speeds.shape = original_shape
 
-    def saveSpeedCSV(self, outdir, fname=None, tunit = "s"):
-        """
-        Saves a csv of average speeds per frame in outdir.
-
-        :param outdir: Directory where output is stored
-        :type outdir: pathlib.Path
-        :param fname: filename, defaults to channel name + speeds.csv
-        :type fname: str
-        :param tunit: Time unit in output one of: "s", "min", "h", "days"
-        :type tunit: str
-        :return:
-        """
-        # print("Saving csv of mean speeds...")
-
-        if fname is None:
-            fname = self.analyzer.channel.name + "_speeds.csv"
-
-        arr = self.getAvgSpeeds()
-
-        time_multipliers = {
-            "s": 1,
-            "min": 1/60,
-            "h": 1/(60*60),
-            "days": 1/(24*60*60)
-        }
-        assert tunit in time_multipliers.keys(), "tunit has to be one of: " + str(time_multipliers.keys())
-
-        fr_interval_multiplier = time_multipliers.get(tunit) * (self.analyzer.channel.finterval_ms/1000)
-
-        timepoints_abs = np.arange(0, arr.shape[0], dtype='float32') * fr_interval_multiplier
-
-        df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_frame_flow_" + self.analyzer.unit])
-        df.index.name = "Time("+tunit+")"
-
-        saveme = outdir / fname
-        df.to_csv(saveme)
-
-    def saveSpeedCSV(self, outdir, fname=None, tunit = "s"):
+    def saveCSV(self, outdir, fname=None, tunit ="s"):
         """
         Saves a csv of average speeds per frame in outdir.
 
@@ -865,20 +754,233 @@ class FlowSpeedAnalysis(FlowAnalysis):
         df.to_csv(saveme)
 
 
-
-
-
-class AlignmentIndex(Analysis):
+class AlignmentIndexAnalysis(FlowAnalysis):
     """
-    Calculates the alignment index as defined as in Malinverno et. al 2017.
+    Calculates the alignment index for the flow vectors in a FlowAnalyzer object.
+
+    Alignment index is defined as in Malinverno et. al 2017. For every frame the ai is the average of the dot
+    products of the mean velocity vector with each individual vector, all divided by the product of their
+    magnitudes.
 
     The alignment index is 1 when the local velocity is parallel to the mean direction of migration  (-1 if antiparallel).
 
     """
-
-    def __init__(self, analyzer, returnMagnitudesFlag=False):
+    def __init__(self, analyzer):
         super().__init__(analyzer)
-        self.returnMagnitudesFlag = returnMagnitudesFlag
+        self.alignment_idxs = None
+        self.avg_alignment_idxs = None
+
+    def calculateAlignIdxs(self):
+        """
+        Calculates the aligment index for each pixel in base FlowAnalyzer flow array and populates self.alignment_idxs
+
+        :return: nunpy array with same size as analyzer flows, where every entry is the alignment index in that pixel
+        :rtype: numpy.ndarray
+        """
+        flows = self.analyzer._getFlows()
+        self.alignment_idxs = np.empty((flows.shape[0], flows.shape[1], flows.shape[2]))
+
+        for frame in range(flows.shape[0]):
+            u = self.analyzer.get_u_array(frame)
+            v = self.analyzer.get_v_array(frame)
+            self.alignment_idxs[frame] = self._alignment_index(u, v)
+
+        return self.alignment_idxs
+
+    def _alignment_index(self, u, v):
+        """
+        Returns an array of the same shape as u and v with the alignment index (ai).
+
+        :param u: 2D numpy array with u component of velocity vectors
+        :param v: 2D numpy array with v component of velocity vectors
+        :return: nunpy array with size=input.size where every entry is the alignment index in that pixel
+
+        """
+
+        assert (u.shape == v.shape) and (len(u.shape) == 2), "Only single frames are processed"
+
+        vector_0 = np.array((np.mean(u), np.mean(v)))
+        v0_magnitude = np.linalg.norm(vector_0)
+
+        vector_magnitudes = np.sqrt((np.square(u) + np.square(v)))  # a^2 + b^2 = c^2
+        magnitude_products = vector_magnitudes * v0_magnitude
+        dot_products = u * vector_0[0] + v * vector_0[1]  # Scalar multiplication followed by array addition
+
+        ai = np.divide(dot_products, magnitude_products)
+
+        return ai
+
+    def saveArrayAsTif(self, outdir, fname=None):
+        """
+        Saves the alignment index array as a 32-bit tif with imageJ metadata.
+
+        Pixel intensities encode alignment indexes.
+
+        :param outdir: Directory to store file in
+        :type outdir: pathlib.Path
+        :param fname: Filename, defaults to Analysis channel name with appended tags +_ai.tif
+                      if ``None``
+
+        :return: None
+        """
+        assert self.alignment_idxs is not None, "Alignment indexes not calculated!"
+
+        original_shape = self.alignment_idxs.shape
+        #imageJ hyperstacks need 6D arrays for saving
+        channel.rehape3DArrayTo6D(self.alignment_idxs)
+
+        if fname == None:
+            fname = self.analyzer.channel.name + "_ai.tif"
+
+
+        saveme = outdir / fname
+
+        ij_metadatasave = {'unit': 'um', 'finterval': round(self.analyzer.channel.finterval_ms / 1000, 2),
+                           'tunit': "s", 'frames': self.alignment_idxs.shape[0],
+                           'slices': 1, 'channels': 1}
+
+        tifffile.imwrite(file=saveme,
+                         data=self.alignment_idxs.astype(np.float32),
+                         imagej=True,
+                         resolution=(1 / self.analyzer.channel.pxSize_um, 1 / self.analyzer.channel.pxSize_um),
+                         metadata=ij_metadatasave)
+
+        #restore original array shape in case further analysis is performed
+        self.alignment_idxs.shape = original_shape
+
+    def calculateAverage(self):
+        """
+        Calculates the average alignment index for each time point in self.alignment_idxs
+
+        :return: self.avg_alignment_idxs, 1D numpy.ndarray of the same length as self.alignment_idxs
+        :rtype: numpy.ndarray
+
+        """
+        if self.alignment_idxs is None:
+            self.calculateAlignIdxs()
+
+        #sometiimes OpenPIV genereates NaN values
+        if np.isnan(self.alignment_idxs.any()):
+            self.avg_alignment_idxs = np.nanmean(self.alignment_idxs, axis=(1, 2))
+
+        else:
+            self.avg_alignment_idxs = self.alignment_idxs.mean(axis=(1,2))
+
+        self.avg_alignment_idxs.shape = self.avg_alignment_idxs.shape[0] #make sure array is 1D
+
+        return self.avg_alignment_idxs
+
+    def getAvgAlignIdxs(self):
+        """
+        Returns average alignment indexes for Analyzer
+
+        :return:
+        """
+        if self.avg_alignment_idxs is None:
+            self.calculateAverage()
+
+        return self.avg_alignment_idxs
+
+    def saveCSV(self, outdir, fname=None, tunit="s"):
+
+        """
+        Saves a csv of average aligmnent indexes per frame in outdir.
+
+        :param outdir: Directory where output is stored
+        :type outdir: pathlib.Path
+        :param fname: filename, defaults to channel name + ai.csv
+        :type fname: str
+        :param tunit: Time unit in output one of: "s", "min", "h", "days"
+        :type tunit: str
+        :return:
+        """
+
+        if fname is None:
+            fname = self.analyzer.channel.name + "_ai.csv"
+
+        arr = self.getAvgAlignIdxs()
+
+        time_multipliers = {
+            "s": 1,
+            "min": 1 / 60,
+            "h": 1 / (60 * 60),
+            "days": 1 / (24 * 60 * 60)
+        }
+        assert tunit in time_multipliers.keys(), "tunit has to be one of: " + str(time_multipliers.keys())
+
+        fr_interval_multiplier = time_multipliers.get(tunit) * (self.analyzer.channel.finterval_ms / 1000)
+
+        timepoints_abs = np.arange(0, arr.shape[0], dtype='float32') * fr_interval_multiplier
+
+        df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_alignment_idx_" + self.analyzer.unit])
+        df.index.name = "Time(" + tunit + ")"
+
+        saveme = outdir / fname
+        df.to_csv(saveme)
+
+
+class IopAnalysis(FlowAnalysis):
+    """
+    Info
+
+    """
+    def __init__(self, analyzer):
+        """
+        More info
+
+        :param analyzer:
+        """
+        super().__init__(analyzer)
+        #TODO
+
+    def rms(self, frame): #Root Mean Square Velocity
+        """
+        Calculates the root mean square velocity of the input frame number from optical flow data in self.flows.
+
+        rms is the speed, or vector magnitudes, in the unit pixels/frame. This is equivalent to taking the
+        square root of the mean square velocity. rms is used in the calculation of IOP.
+
+        :param frame: the number of the frame to be analyzed
+        :type frame: int
+        :return: the root mean square velocity of the velocity vectors in the frame
+        :rtype: float
+        """
+        u=self.get_u_array()
+
+        rms = np.sqrt(np.mean(np.square(u)+np.square(v))) #sqrt(u^2+v^2)
+
+        return rms
+
+    def smvvm(self, u, v):  # square_mean_vectorial_velocity_magnitude
+        """
+        Array addition of the squared average vector components, used in calculating the instantaneous order parameter
+
+        :param u:
+            2D numpy array with the u component of velocity vectors
+        :param v:
+            2D numpy array with the u component of velocity vectors
+        :return:
+            2D numpy array with the u component of velocity vectors
+
+        """
+
+        return np.square(np.mean(u)) + np.square(np.mean(v))
+
+    def instantaneous_order_parameter(self, u, v):
+        """
+        Calculates the instantaneous order parameter (iop) in one PIV frame see  Malinverno et. al 2017 for a more detailed
+        explanation. The iop is a measure of how similar the vectors in a field are, which takes in to account both the
+        direcions and magnitudes of the vectors. iop always between 0 and 1, with iop = 1 being a perfectly uniform field
+        of identical vectors, and iop = 0 for a perfectly random field.
+
+        :param u:
+            2D numpy array with the u component of velocity vectors
+        :param v:
+            2D numpy array with the u component of velocity vectors
+        :return:
+            (float) iop of vector field
+        """
+        return smvvm(u, v) / msv(u, v) #square_mean_vectorial_velocity_magnitude/Mean Square Velocity
 
 
 

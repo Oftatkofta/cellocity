@@ -2,11 +2,12 @@ import time, os
 from pathlib import Path
 import tifffile
 from cellocity.channel import Channel, MedianChannel
-from cellocity.analysis import FarenbackAnalyzer, OpenPivAnalyzer, FlowSpeedAnalysis
+from cellocity.analysis import FarenbackAnalyzer, OpenPivAnalyzer, FlowSpeedAnalysis, AlignmentIndexAnalysis
 from matplotlib import pyplot as plt
 import pandas as pd
 import seaborn as sns
 import numpy as np
+import cv2 as cv
 
 
 """
@@ -16,6 +17,8 @@ some massaging of the Channel objects will have to be done
 """
 inpath = Path(r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Calibration stuff\DIC_truth")
 outpath = Path(r"C:\Users\Jens\Desktop\temp")
+outpath2 = Path(r"C:\Users\Jens\Desktop\temp2")
+outpath3 = Path(r"C:\Users\Jens\Desktop\temp3")
 
 def convertChannel(fname, finterval=1):
     """
@@ -77,21 +80,33 @@ def make_channels(inpath):
     return out
 
 
-def processAndSave(ch, outpath):
+def processAndSave(ch, outpath, **kwargs):
     a1 = FarenbackAnalyzer(ch, "um/s")
+    a1.doFarenbackFlow()
+
+    t1 = str(round(a1.process_time, 2))
+    speed1 = FlowSpeedAnalysis(a1)
+    speed1.calculateAverageSpeeds()
+    speed1.saveCSV(outpath, fname="FLOW_" + ch.name + "_" + t1 + ".csv")
+    speed1.saveArrayAsTif(outpath, fname="FLOW_" + ch.name + "_speeds.tif")
+    speed1.calculateHistograms()
+    speed1.draw_all_flow_frames_superimposed(scalebarFlag=True, scalebarLength=1, **kwargs)
+    speed1.saveFlowAsTif(outpath)
+    ai1 = AlignmentIndexAnalysis(a1)
+    ai1.saveCSV(outpath, fname="FLOW_" + ch.name + "_ai.csv")
+
     a2 = OpenPivAnalyzer(ch, "um/s")
     a2.doOpenPIV()
-    a1.doFarenbackFlow()
-    speed1 = FlowSpeedAnalysis(a1)
-    speed2 = FlowSpeedAnalysis(a2)
-    speed1.calculateAverageSpeeds()
-    speed2.calculateAverageSpeeds()
-    t1 = str(round(a1.process_time, 2))
     t2 = str(round(a2.process_time, 2))
-    speed1.saveSpeedCSV(outpath, fname="FLOW_"+ch.name+"_"+t1+".csv")
-    speed2.saveSpeedCSV(outpath, fname="PIV_"+ch.name+"_"+t2+".csv")
-
-
+    speed2 = FlowSpeedAnalysis(a2)
+    speed2.calculateAverageSpeeds()
+    speed2.saveCSV(outpath, fname="PIV_"+ch.name+"_"+t2+".csv")
+    speed2.saveArrayAsTif(outpath, fname="PIV_" + ch.name + "_speeds.tif")
+    speed1.calculateHistograms()
+    speed2.draw_all_flow_frames_superimposed(scalebarFlag=True, scalebarLength=1, **kwargs)
+    speed2.saveFlowAsTif(outpath)
+    ai2 = AlignmentIndexAnalysis(a2)
+    ai2.saveCSV(outpath, fname="PIV_" + ch.name + "_ai.csv")
 
 
 def speedCsvToDataFrame(inpath):
@@ -150,26 +165,39 @@ def make_speed_plot(df):
                     height=8, aspect=.7)
     return sns_plot
 
-def run_validation(inpath, outpath):
+
+
+def test_ai(ch, outpath):
+    a1 = FarenbackAnalyzer(ch, "um/s")
+    a1.doFarenbackFlow()
+    a2 = OpenPivAnalyzer(ch, "um/s")
+    a2.doOpenPIV()
+
+    ai1 = AlignmentIndexAnalysis(a1)
+    ai1.saveCSV(outpath)
+    ai1.saveArrayAsTif(outpath)
+
+    ai2 = AlignmentIndexAnalysis(a2)
+    ai2.saveCSV(outpath)
+    ai2.saveArrayAsTif(outpath)
+
+def run_validation(inpath, outpath, **kvargs):
     ch_list = make_channels(inpath)
     for ch in ch_list:
-        processAndSave(ch)
-
+        processAndSave(ch, outpath, **kvargs)
+        #test_ai(ch, outpath)
 
 if __name__ == "__Main__":
+    finterval = 1
+    kvargs = {'step': 60, 'scale': 10, 'line_thicknes': 2}
+    run_validation(inpath, outpath)
     df = speedCsvToDataFrame(outpath)
     timeplot = make_proces_time_plot(df)
     speedplot = make_speed_plot(df)
 
-
-#sns.stripplot(x="analyzer", y="process_time", data=df)
-#sns.boxplot(x="analyzer", y="process_time", data=df)
-
-
-#
-#sns.distplot(df.)
-#gdf = df.groupby(["analyzer", "filter", "displacement"])
-#time_df = gdf["process_time"]
-#df.boxplot(column=["process_time"], by="analyzer", grid=False)
-#df.boxplot(column='AVG_frame_flow_um/s', by=["analyzer","displacement", "filter"], grid=False)
-    #plt.show()
+kvargs = {'step': 32, 'scale': 10, 'line_thicknes': 2}
+run_validation(inpath, outpath, **kvargs)
+#fname = r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Calibration stuff\DIC_truth\fixed_monolayer_DIC_40X_dX-1um_dY-1um_1_MMStack.ome.tif"
+#testchannel = convertChannel(fname, 1)
+#testchannel.trim(0,4)
+test_ai(testchannel, outpath3)

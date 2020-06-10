@@ -66,7 +66,7 @@ a_list_of_analysis = [regular_analysis, median_analysis]
 for a in a_list_of_analysis:
     animateAndSaveLogo(a)
     a.calculateAverageSpeeds()
-    a.saveSpeedArray(savepath)
+    a.saveArrayAsTif(savepath)
     a.saveFlowAsTif(savepath)
 
 tif.close()

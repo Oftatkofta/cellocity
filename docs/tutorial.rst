@@ -147,8 +147,8 @@ processing.
 	
 	savepath = Path("path/to/save/folder")
 	
-	speed_analysis_ch0.saveSpeedArray(outdir=savepath):
-	speed_analysis_ch0.saveSpeedCSV(outdir=savepath, fname="mySpeeds.csv", tunit="s")
+	speed_analysis_ch0.saveArrayAsTif(outdir=savepath):
+	speed_analysis_ch0.saveCSV(outdir=savepath, fname="mySpeeds.csv", tunit="s")
 	
 That's it! If you want more detailed information, please check the :doc:`api`
 	

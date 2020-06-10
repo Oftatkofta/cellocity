@@ -34,8 +34,8 @@ for testcase in testfiles.keys():
         speeds_ch0.calculateSpeeds()
         speeds_ch0.calculateAverageSpeeds()
         speeds_ch0.calculateHistograms()
-        #speeds_ch0.saveSpeedArray(savepath)
-        speeds_ch0.saveSpeedCSV(savepath,fname=speeds_ch0.getChannelName()+"glide-"+str(glideFlag)+".csv", tunit="min")
+        #speeds_ch0.saveArrayAsTif(savepath)
+        speeds_ch0.saveCSV(savepath, fname=speeds_ch0.getChannelName() + "glide-" + str(glideFlag) + ".csv", tunit="min")
 
 
 
