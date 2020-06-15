@@ -6,11 +6,11 @@ A 30 second pitch
 
 Cellocity is an bioimage analysis tool for quantifying confluent cell dynamics. The main advantages of Cellocity is its ability work on unlabeled Brightfield time lapse microscopy data, and its ability to both quantify and visualize abstract optical flow analysis to the user.
 
-.. figure:: _static/convergence.png
+.. figure:: _static/spinning_logo.gif
     :align: left
     :alt: Example output
     
-    Figure showing one frame of raw data (left), a vector field visualization (center), and a heat map encoding speeds (right).
+    Figure showing simulated raw data (left), a vector field visualization (center), and a heat map encoding speeds (right).
 
 
 Cellocity development history

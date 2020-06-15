@@ -74,7 +74,7 @@ def make_channels(inpath):
             #TODO remove trim
             #chan.trim(0,3)
             out.append(chan)
-            m_chan = convertMedianChannel(f, 1)
+            m_chan = MedianChannel(chan)
             out.append(m_chan)
 
     return out
