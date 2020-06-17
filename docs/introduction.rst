@@ -26,7 +26,7 @@ Cellocity is built on top of  Christoph Gohlke's `Tifffile library <https://pypi
 
 Cellocity architecture
 ----------------------
-The core element in Cellocity is the ``Channel`` object, which represents one Z-plane of one time lapse image channel. ``Channel`` objects also handle image pre-processing, such as temporal or spatial median filtering. ``Channel`` objects are then given as input to ``Analysis`` objects, which perform specific analysis on the data. ``Analysis`` objects can then, in turn, be given to ``Analyzer`` objects, which take care of performing further analysis, such as calculating the alignment index, instantaneous order parameter (:math:`{\psi}`), and correlation length.
+The core element in Cellocity is the ``Channel`` object, which represents one Z-plane of one time lapse image channel. ``Channel`` objects also handle image pre-processing, such as temporal or spatial median filtering. ``Channel`` objects are then given as input to ``Analyzer`` objects, which perform specific analysis on the data. ``Analyzer`` objects can then, in turn, be given to ``Analysis`` objects, which take care of performing further analysis, such as calculating the alignment index, instantaneous order parameter (:math:`{\psi}`), and correlation length.
 
 Examples of algorithms implemented
 ----------------------------------

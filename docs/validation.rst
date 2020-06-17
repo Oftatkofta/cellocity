@@ -40,12 +40,6 @@ The general structure of the dataset is outlined in the table below.
 +---------------------------------+-----------+---------------+-----------------+--------------------+--------------------+------------------------------------------------------------+
 | Nikon 60X/0.7 Air S.Pln.Fl.     | 1X        | 60X           | 0.125           | 1                  | 1                  | fixed_monolayer_DIC_60X_dX-1um_dY-1um_1_MMStack.ome.tif    |
 +---------------------------------+-----------+---------------+-----------------+--------------------+--------------------+------------------------------------------------------------+
-| Nikon 60X/0.7 Air S.Pln.Fl.     | 1X        | 60X           | 0.125           | 0                  | 1                  | fixed_monolayer_DIC_90Xopt_dX-0um_dY-1um_1_MMStack.ome.tif |
-+---------------------------------+-----------+---------------+-----------------+--------------------+--------------------+------------------------------------------------------------+
-| Nikon 60X/0.7 Air S.Pln.Fl.     | 1X        | 60X           | 0.125           | 1                  | 0                  | fixed_monolayer_DIC_90Xopt_dX-1um_dY-0um_1_MMStack.ome.tif |
-+---------------------------------+-----------+---------------+-----------------+--------------------+--------------------+------------------------------------------------------------+
-| Nikon 60X/0.7 Air S.Pln.Fl.     | 1X        | 60X           | 0.125           | 1                  | 1                  | fixed_monolayer_DIC_90Xopt_dX-1um_dY-1um_1_MMStack.ome.tif |
-+---------------------------------+-----------+---------------+-----------------+--------------------+--------------------+------------------------------------------------------------+
 
 This dataset allowed us compare the "gold standard" of cell cynamics analysis, Particle Image Velocimetry (PIV) analysis with the lesser-used optical flow analysis.
 Our conclusion mirror what was found in :cite:`Vig2016`, which is that optical flow analysis is indeed superior to PIV analysis in both accuracy and efficiency.
@@ -78,7 +72,16 @@ Monolayers growing on hydrogel are seldom completely planar and portions are oft
     
     Figure showing flow vector visualization of a 600x600 crop from the bottom right corner of the final frame from the 40X magnification files in the dataset. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects. Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
 
-Studying the above figure allows us to get a deeper understanding of why optical flow and PIV differ. Note that the area in the bottom right corner is not properly focused, this causes the PIV algorithm some problem in accurately determining the flow, as illustrated by the inhomogenities in the vector field. 
+Studying the above figure allows us to get a deeper understanding of why optical flow and PIV differ. Note that the area in the bottom right corner is not properly focused, this causes the PIV algorithm some problem in accurately determining the flow, as illustrated by the inhomogenities in the vector field.
+This error can be quantified by calculating the alignment index, a measurement on how well each component vector aligns with the average flow. In our test data the flow should be close to completely uniform, giving an expected alignment index of 1.0.
+
+.. figure:: _static/alignment_index_compare.png
+    :align: left
+    :alt: Figure comparing average frame alignment index from Optical Flow vs PIV
+    
+    Figure showing box plots of average alignment index for each frame for each file the test dataset. y-axis denotes the Alignment Index (dimensionless), as read out by the ``.getAvgAlignIdxs()`` method of ``AlignmentIndexAnalysis``.
+
+Quantifying how well the vector field is aligned allows us to confirm our intital observation that PIV analysis does produce more variability on the direction of the flow vectors. Optical flow gererates alignment indexes very close to the expected value of 1.0, even after temporal median filtering.    
 
 .. figure:: _static/60X_diagonal_compare.gif
     :align: left
