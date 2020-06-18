@@ -1,4 +1,3 @@
-import time, os
 from pathlib import Path
 import tifffile
 from cellocity.channel import Channel, MedianChannel
@@ -6,18 +5,12 @@ from cellocity.analysis import FarenbackAnalyzer, OpenPivAnalyzer, FlowSpeedAnal
 from matplotlib import pyplot as plt
 import pandas as pd
 import seaborn as sns
-import numpy as np
-import cv2 as cv
 
+#A quick sanity check on the flow analyzer using images of a fixed monolayer
+#translated 1 um in x, y, or xy between frames. It's not a time lapse stack, so
+#some massaging of the Channel objects will have to be done
 
-"""
-A quick sanity check on the flow analyzer using images of a fixed monolayer
-translated 1 um in x, y, or xy between frames. It's not a time lapse stack, so
-some massaging of the Channel objects will have to be done 
-"""
 inpath = Path(r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Calibration stuff\DIC_truth")
-outpath = Path(r"C:\Users\Jens\Desktop\temp")
-outpath2 = Path(r"C:\Users\Jens\Desktop\temp2")
 outpath3 = Path(r"C:\Users\Jens\Desktop\temp3")
 
 def convertChannel(fname, finterval=1):
@@ -218,8 +211,6 @@ def get_data_as_df(analyzer, analyzername):
         filter = "None"
     df["filter"] = filter
 
-
-
     return df
 
 
@@ -230,24 +221,14 @@ if __name__ == "__Main__":
     ch_list = make_channels(inpath)
     df = processAndMakeDf(ch_list)
     df.to_csv(saveme)
+    df = pd.read_csv(r"C:\Users\Jens\Desktop\temp3\alldata.csv")
+    print(df.columns)
+    timeplot = make_proces_time_plot(df)
+    plt.show()
+    # plt.savefig(avg_speed_compare.png)
+    speedplot = make_speed_plot(df)
+    plt.show()
+    aiplot = make_ai_plot(df)
+    plt.show()
 
-
-
-#run_validation(inpath, outpath, **kvargs)
-#fname = r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Calibration stuff\DIC_truth\fixed_monolayer_DIC_40X_dX-1um_dY-1um_1_MMStack.ome.tif"
-#testchannel = convertChannel(fname, 1)
-#testchannel.trim(0,4)
-#a1 = make_fb_flow_analyzer(testchannel)
-#df = get_data_as_df(a1,"none", "optical_flow")
-#print(df.columns)
-
-df = pd.read_csv(r"C:\Users\Jens\Desktop\temp3\alldata.csv")
-print(df.columns)
-timeplot = make_proces_time_plot(df)
-plt.show()
-#plt.savefig(avg_speed_compare.png)
-speedplot = make_speed_plot(df)
-plt.show()
-aiplot = make_ai_plot(df)
-plt.show()
 

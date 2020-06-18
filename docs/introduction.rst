@@ -12,6 +12,17 @@ Cellocity is an bioimage analysis tool for quantifying confluent cell dynamics. 
     
     Figure showing simulated raw data (left), a vector field visualization (center), and a heat map encoding speeds (right).
 
+Installing Cellocity
+--------------------
+
+Cellocity is available on the Python package index and can be installed by using pip::
+	
+    pip install cellocity
+
+
+Cellocity requires tifffile, OpenCV, OpenPIV, SciPy, and Seaborn to function correclty.
+
+
 
 Cellocity development history
 -----------------------------
