@@ -92,39 +92,6 @@ def processAndMakeDf(ch_list):
 
     return alldata
 
-
-def speedCsvToDataFrame(inpath):
-    """
-    Generates and returns a dataframe from FlowSpeedAnalysis CSVs in inpath.
-    """
-    alldata = pd.DataFrame()
-
-    for f in inpath.iterdir():
-
-        if (f.suffix == ".csv") and f.is_file():
-            df = pd.read_csv(f, index_col=0)
-            fields = f.name.split("_")
-            analyzer = fields[0]
-            process_time = float(fields[-1][:-4])
-            magnification = fields[4]
-            displacemet = fields[5] + " " +fields[6]
-
-            if "MED" in f.name:
-                filter = "Median"
-            else:
-                filter = "None"
-
-            df["analyzer"]=analyzer
-            df["filter"]=filter
-            df["magnification"]=magnification
-            df["process_time"]=process_time
-            df["displacement"]=displacemet
-            df["filename"]=f.name
-
-            alldata = alldata.append(df)
-
-    return alldata
-
 def make_proces_time_plot(df):
     """
     Generates a bar plot comparing processing times for the two analyzers.
@@ -147,6 +114,7 @@ def make_speed_plot(df):
                     hue="displacement", col="filter",
                     data=df, kind="box",
                     height=8, aspect=.7)
+
     return sns_plot
 
 def make_ai_plot(df):
@@ -158,6 +126,7 @@ def make_ai_plot(df):
                     hue="displacement", col="filter",
                     data=df, kind="box",
                     height=8, aspect=.7)
+
     return sns_plot
 
 
@@ -187,6 +156,20 @@ def make_piv_analyzer(ch):
     return analyzer
 
 def get_data_as_df(analyzer, analyzername):
+    """
+    Creates FlowSpeedAnalysis() and AlignmentIndexAnalysis() from a FlowAnalyzer.
+
+    Calculates average frame speeds and alignment indexes and returns a DataFrame with the results.
+
+
+    :param analyzer: FlowAnalyzer
+    :type analyzer: analysis.FlowAnalyzer
+    :param analyzername: Name of FlowAnalyzer
+    :type analyzername: str
+
+    :return: pd.DataFrame containing results and information derived from channel.name
+    :rtype: pandas.DataFrame
+    """
 
     speed_analysis = FlowSpeedAnalysis(analyzer)
     speed_analysis.calculateAverageSpeeds()
@@ -215,21 +198,22 @@ def get_data_as_df(analyzer, analyzername):
     return df
 
 
-if __name__ == "__Main__":
+if __name__ == "__main__":
     finterval = 1
     kvargs = {'step': 60, 'scale': 10, 'line_thicknes': 2}
     saveme = outpath3 / "alldata.csv"
     ch_list = make_channels(inpath)
     df = processAndMakeDf(ch_list)
     df.to_csv(saveme)
-    df = pd.read_csv(r"C:\Users\Jens\Desktop\temp3\alldata.csv")
-    print(df.columns)
+    df = pd.read_csv(saveme)
+
     timeplot = make_proces_time_plot(df)
     plt.show()
-    # plt.savefig(avg_speed_compare.png)
-    speedplot = make_speed_plot(df)
+
+    speed_plot = make_speed_plot(df)
     plt.show()
-    aiplot = make_ai_plot(df)
+
+    ai_plot = make_ai_plot(df)
     plt.show()
 
 
