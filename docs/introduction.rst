@@ -20,7 +20,7 @@ Cellocity is available on the Python package index and can be installed by using
     pip install cellocity
 
 
-Cellocity requires tifffile, OpenCV, OpenPIV, SciPy, and Seaborn to function correclty.
+Cellocity requires Python (>3.7), tifffile (2020.5.5), python-OpenCV (4.2.0.34), OpenPIV (0.21.3), Numpy (1.18.4), Pandas (1.0.3) to function correclty. Additionally you need Matplotlib (3.2.1) and Seaborn (0.10.1) in order to visualize the validation output.
 
 
 
