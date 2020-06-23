@@ -7,8 +7,8 @@ import pandas as pd
 import seaborn as sns
 
 #A quick sanity check on the flow analyzer using images of a fixed monolayer
-#translated 1 um in x, y, or xy between frames. It's not a time lapse stack, so
-#some massaging of the Channel objects will have to be done
+#translated 1 um in x, y, or x+y between frames. It's not a time lapse stack, so
+#some custom manipulation of the Channel objects will have to be done.
 
 inpath = Path(r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Calibration stuff\DIC_truth")
 outpath3 = Path(r"C:\Users\Jens\Desktop\temp3")
@@ -64,8 +64,6 @@ def make_channels(inpath):
     for f in inpath.iterdir():
         if (f.suffix == ".tif") and f.is_file():
             chan = convertChannel(f)
-            #TODO remove trim
-            #chan.trim(0,3)
             out.append(chan)
             m_chan = convertMedianChannel(f)
             out.append(m_chan)
@@ -74,12 +72,15 @@ def make_channels(inpath):
 
 def processAndMakeDf(ch_list):
     """
-    Runs tests on dataset
+    Creates analyzers from and runs test functions on a list of Channels.
 
-    :param ch_list:
-    :param outpath:
-    :return:
+
+    :param ch_list: List of Channel objects
+    :type ch_list: list
+    :return: Pandas DataFrame with data from analysis
+    :rtype: pandas.DataFrame
     """
+
     alldata = pd.DataFrame()
 
     for ch in ch_list:
@@ -196,7 +197,7 @@ def get_data_as_df(analyzer, analyzername):
     df["aligmnent_index"] = ai_analysis.getAvgAlignIdxAsDf()
 
     df["analyzer"] = analyzername
-    df["process_time"] = t1 = str(round(analyzer.process_time, 2))
+    df["process_time"] = str(round(analyzer.process_time, 2))
     df["file_name"] = analyzer.channel.name
 
     fields = analyzer.channel.name.split("_")
