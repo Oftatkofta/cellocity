@@ -6,9 +6,12 @@ from matplotlib import pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-#A quick sanity check on the flow analyzer using images of a fixed monolayer
-#translated 1 um in x, y, or x+y between frames. It's not a time lapse stack, so
-#some custom manipulation of the Channel objects will have to be done.
+# This module contains the code used for the "Validaton of the Cellocity software" section of the documentation.
+# The code herein performs a sanity check on your Cellocity installation by running a series of test functions
+# on all files in the inpath.
+# Cellocity has been validated on a set of images of a fixed monolayer translated 1 um in x, y, or x+y between frames.
+# It's natively not a time lapse stack data set, so some custom manipulation of the Channel objects will have to be done
+# in order to make it appear as though the image stacks come from a time lapse set with a 1 Hz imaging frame rate.
 
 inpath = Path(r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Calibration stuff\DIC_truth")
 outpath3 = Path(r"C:\Users\Jens\Desktop\temp3")
@@ -77,6 +80,8 @@ def processAndMakeDf(ch_list):
 
     :param ch_list: List of Channel objects
     :type ch_list: list
+    :param outpath: Path where to save output
+    :type outpath: pathlib.Path
     :return: Pandas DataFrame with data from analysis
     :rtype: pandas.DataFrame
     """
