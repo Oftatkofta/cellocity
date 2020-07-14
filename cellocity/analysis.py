@@ -529,8 +529,6 @@ class FlowAnalysis(Analysis):
         return
 
 
-
-
 class FlowSpeedAnalysis(FlowAnalysis):
     """
     Handles all analysis and data output of speeds from FlowAnalyzers.
@@ -961,21 +959,24 @@ class AlignmentIndexAnalysis(FlowAnalysis):
 
 class IopAnalysis(FlowAnalysis):
     """
-    Info
+    Calculates the instantaneous order parameter (iop) for each frame of flow see Malinverno et. al 2017 for a more
+    detailed explanation.
 
+    The iop is a measure of how similar the vectors in a field are, which takes in to account both the
+    direcion and magnitudes of the vectors. iop is always between 0 and 1, with iop = 1 being a perfectly uniform field
+    of identical vectors, and iop = 0 for a perfectly random field.
     """
-    def __init__(self, analyzer):
+    def __init__(self, flowanalyzer):
         """
-        More info
+        :param flowanalyzer: a FlowAnalyzer object
+        :type flowanalyzer: analysis.FlowAnalyzer
+        """
+        super().__init__(flowanalyzer)
 
-        :param analyzer:
-        """
-        super().__init__(analyzer)
-        #TODO
 
-    def rms(self, frame): #Root Mean Square Velocity
+    def _rms(self, frame): #Root Mean Square Velocity
         """
-        Calculates the root mean square velocity of the input frame number from optical flow data in self.flows.
+        Calculates the root mean square velocity of the input frame number from optical flow data.
 
         rms is the speed, or vector magnitudes, in the unit pixels/frame. This is equivalent to taking the
         square root of the mean square velocity. rms is used in the calculation of IOP.
@@ -985,13 +986,14 @@ class IopAnalysis(FlowAnalysis):
         :return: the root mean square velocity of the velocity vectors in the frame
         :rtype: float
         """
-        u=self.get_u_array()
+        u = self.analyzer.get_u_array(frame)
+        v = self.analyzer.get_v_array(frame)
 
         rms = np.sqrt(np.mean(np.square(u)+np.square(v))) #sqrt(u^2+v^2)
 
         return rms
 
-    def smvvm(self, u, v):  # square_mean_vectorial_velocity_magnitude
+    def _smvvm(self, u, v):  # Square Mean Vectorial Velocity Magnitude
         """
         Array addition of the squared average vector components, used in calculating the instantaneous order parameter
 
@@ -1006,7 +1008,7 @@ class IopAnalysis(FlowAnalysis):
 
         return np.square(np.mean(u)) + np.square(np.mean(v))
 
-    def instantaneous_order_parameter(self, u, v):
+    def _instantaneous_order_parameter(self, u, v):
         """
         Calculates the instantaneous order parameter (iop) in one PIV frame see  Malinverno et. al 2017 for a more detailed
         explanation. The iop is a measure of how similar the vectors in a field are, which takes in to account both the
@@ -1020,4 +1022,4 @@ class IopAnalysis(FlowAnalysis):
         :return:
             (float) iop of vector field
         """
-        return smvvm(u, v) / msv(u, v) #square_mean_vectorial_velocity_magnitude/Mean Square Velocity
+        return self._smvvm(u, v) / self._msv(u, v) #square_mean_vectorial_velocity_magnitude/Mean Square Velocity
