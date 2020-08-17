@@ -30,7 +30,7 @@ Studying the coordinated movement of confluent cells can give insigths in to may
 
 # Statement of need
 
-To date, optical flow and PIV analysis of microscopy data has primarely been done by different plugins for ImageJ, such as [PIV analyser](https://imagej.net/PIV_analyser) or via  MATLAB scripts `[@Vig2016]`. However, because PIV av optical flow are commonly used in the fields of fluid dynamics `[@Taylor2010]` and computer vision `[@Bradski2000]`
+To date, optical flow and particle image velocimetry (PIV) analysis of microscopy data has primarely been done by different plugins for ImageJ, such as [PIV analyser](https://imagej.net/PIV_analyser) or via  MATLAB scripts `[@Vig2016]`. However, these methods are somewhat limited in ther accessibility, analysis capacity, metadata tracking, and data visualization capabilities. The unique feature of microscopy data is that the spatial resolution (pixel size) can be known to a high degree of accuracy, and together with frame time stamps this can be used to calculate very accurate flow velocities of cells. PIV av optical flow are commonly used in the fields of fluid dynamics `[@Taylor2010]` and computer vision `[@Bradski2000]`, and several open source frameworks exist to service these communities, such as [openPIV](http://www.openpiv.net/) and [OpenCV](https://opencv.org/).
 
 Cellocity is an bioimage analysis tool for quantifying confluent cell dynamics written in Python. It has been developed to be a "one-stop-shop" for researchers interested in investigating cell dynamics. Cellocity allows users to test different underlying analysis algorithms, packages, and parameters, such as comparing OpenPIV `[@Taylor2010]` and optical flow, and visualizations where crucial image metadata is always retained.
 
