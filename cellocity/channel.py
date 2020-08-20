@@ -25,7 +25,7 @@ class Channel(object):
 
 
     """
-    def __init__(self, chIndex, tiffFile, name, sliceIndex=0):
+    def __init__(self, chIndex:int, tiffFile, name, sliceIndex:int=0):
         """
         :param chIndex: index of channel to create, 0-based.
         :type chIndex: int
