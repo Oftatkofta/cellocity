@@ -8,8 +8,11 @@ Contributing to Cellocity
 
 Contributions are welcome and appreciated, just clone the Github repository an create a `pull request <https://github.com/Oftatkofta/cellocity/pulls>`_. Before you do so, please make sure that the documentaion strings are written in reStructuredText so that `Sphinx-autodoc <https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html>`_ can generate automatic API documentation. 
 
-Bug reposts and feature requests can be submitted `here <https://github.com/Oftatkofta/cellocity/issues/new/choose>`_.
 
+Bug reports and feature requests
+--------------------------------
+
+Bug reposts and feature requests can be submitted `here <https://github.com/Oftatkofta/cellocity/issues/new/choose>`_.
 
 
 

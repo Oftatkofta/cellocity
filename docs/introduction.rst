@@ -87,6 +87,12 @@ Simple analysis data redout example::
 
 For more detailed examples please check out the tutorial section.
 
+
+Support
+-------
+
+If something is unclear or if you are in need of support, please contact the developer by creating a new `support issue <https://github.com/Oftatkofta/cellocity/issues>`_.
+
 References
 ----------
 .. bibliography:: bibliography.bib
