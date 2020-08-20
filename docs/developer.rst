@@ -3,6 +3,17 @@ Developer Information
 
 This section contains information relevant for developing and extending Cellocity functionality. It also contains random tidbits of general info that I have uncovered during the development process of this framework. I present it here in the hope that someone may find it useful.
 
+Contributing to Cellocity
+-------------------------
+
+Contributions are welcome and appreciated, just clone the Github repository an create a `pull request <https://github.com/Oftatkofta/cellocity/pulls>`_. Before you do so, please make sure that the documentaion strings are written in reStructuredText so that `Sphinx-autodoc <https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html>`_ can generate automatic API documentation. 
+
+Bug reposts and feature requests can be submitted `here <https://github.com/Oftatkofta/cellocity/issues/new/choose>`_.
+
+https://github.com/Oftatkofta/cellocity/issues/new?assignees=Oftatkofta&labels=bug&template=bug_report.md&title=%5BBUG%5D
+
+
+
 A note on metadata and file formats
 -------------------------------------
 
