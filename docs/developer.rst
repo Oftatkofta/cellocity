@@ -10,7 +10,6 @@ Contributions are welcome and appreciated, just clone the Github repository an c
 
 Bug reposts and feature requests can be submitted `here <https://github.com/Oftatkofta/cellocity/issues/new/choose>`_.
 
-https://github.com/Oftatkofta/cellocity/issues/new?assignees=Oftatkofta&labels=bug&template=bug_report.md&title=%5BBUG%5D
 
 
 
