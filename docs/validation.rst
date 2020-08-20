@@ -43,7 +43,7 @@ The general structure of the dataset is outlined in the table below.
 
 This dataset allowed us compare the "gold standard" of cell cynamics analysis, Particle Image Velocimetry (PIV) analysis with the lesser-used optical flow analysis.
 Our conclusion mirror what was found in :cite:`Vig2016`, which is that optical flow analysis is indeed superior to PIV analysis in both accuracy and efficiency.
-The following section will substantiate this finding. All analysis were run on a early 2020 Dell XPS 15 7590 laptop running Windows 10. The dataset has been deposited in to the BioStudies database with the accession number `S-BSST461<https://www.ebi.ac.uk/biostudies/studies/S-BSST461>`_ and can be downloaded from there.
+The following section will substantiate this finding. All analysis were run on a early 2020 Dell XPS 15 7590 laptop running Windows 10. The dataset has been deposited in to the BioStudies database with the accession number `S-BSST461 <https://www.ebi.ac.uk/biostudies/studies/S-BSST461>`_ and can be downloaded from there.
 
 .. figure:: _static/process_time_compare.png
     :align: left
