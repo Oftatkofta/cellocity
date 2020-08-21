@@ -2,12 +2,6 @@ import numpy as np
 import tifffile.tifffile as tifffile
 import re
 import statistics
-import cv2 as cv
-import time
-import os
-import pandas as pd
-import warnings
-
 
 class Channel(object):
     """
@@ -37,6 +31,8 @@ class Channel(object):
         :type sliceIndex: int
 
         """
+        assert type(tiffFile) == tifffile, "Channel has to be created with a Tifffile object!"
+
         self.chIndex = chIndex
         self.sliceIdx = sliceIndex
         self.tif = tiffFile
@@ -693,12 +689,6 @@ def reshape6DArrayTo3D(array_6D):
     assert len(array_6d.shape) == 6, "Must use 6D array!"
     array_6d.shape = (array_6d.shape[0], array_6d.shape[3], array_6d.shape[4])
 
-def read_micromanager(tif):
-    """
-    returns metadata from a micromanager file
-
-    """
-    pass
 
 
 
