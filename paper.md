@@ -1,20 +1,21 @@
 ---
-title: 'Cellocity: A Python package for confluent cell dynamics analysis'
+title: 'Cellocity: A Python package for analysis of confluent cell layer dynamics'
 tags:
   - Python
   - microscopy
   - dynamics
-  - confluent cell dynamics
+  - confluent cell layer
 authors:
   - name: Jens Eriksson^[Corresponding author]
     orcid: 0000-0002-8945-2665
     affiliation: 1
   - name: Daniel Styrström
     affiliation: 2
-  - name: Mikael Sellin
+  - name: Mikael E. Sellin
     orcid: 0000-0002-8355-0803
+	affiliation:1
 affiliations:
- - name: Department of Medical Biochemistry and Microbiology, Uppsala University
+ - name: Science for Life Laboratory, Department of Medical Biochemistry and Microbiology, Uppsala University
    index: 1
  - name: Daniel Styrström Consulting
    index: 2
