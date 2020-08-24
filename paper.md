@@ -19,7 +19,7 @@ affiliations:
    index: 1
  - name: Daniel Styrström Consulting
    index: 2
-date: 20 June 2020
+date: 24 August 2020
 bibliography: paper.bib
 
 ---
