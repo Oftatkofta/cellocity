@@ -1,3 +1,5 @@
+import sys
+import getopt
 from pathlib import Path
 import tifffile
 from cellocity.channel import Channel, MedianChannel
@@ -13,8 +15,6 @@ import seaborn as sns
 # It's natively not a time lapse stack data set, so some custom manipulation of the Channel objects will have to be done
 # in order to make it appear as though the image stacks come from a time lapse set with a 1 Hz imaging frame rate.
 
-inpath = Path(r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Calibration stuff\DIC_truth")
-outpath3 = Path(r"C:\Users\Jens\Desktop\temp3")
 
 def convertChannel(fname, finterval=1):
     """
@@ -203,22 +203,51 @@ def get_data_as_df(analyzer, analyzername):
     return df
 
 
-if __name__ == "__main__":
+def run_validation(inpath, outpath):
+
     finterval = 1
     kvargs = {'step': 60, 'scale': 10, 'line_thicknes': 2}
-    saveme = outpath3 / "alldata.csv"
+    saveme = outpath / "alldata.csv"
     ch_list = make_channels(inpath)
     df = processAndMakeDf(ch_list)
     df.to_csv(saveme)
     df = pd.read_csv(saveme)
 
     timeplot = make_proces_time_plot(df)
-    plt.show()
+    savename = outpath / "time_plot.png"
+    plt.savefig(savename)
+    #plt.show()
 
     speed_plot = make_speed_plot(df)
-    plt.show()
+    savename = outpath / "speed_plot.png"
+    plt.savefig(savename)
+    #plt.show()
 
     ai_plot = make_ai_plot(df)
-    plt.show()
+    savename = outpath / "alignementindex_plot.png"
+    plt.savefig(savename)
+    #plt.show()
 
+def main(argv):
+
+    inputfolder = ''
+    outputfolder = ''
+    try:
+        opts, args = getopt.getopt(argv,"hi:o:",["infolder=","outfolder="])
+    except getopt.GetoptError:
+        print ('validation.py -i <infolder> -o <outfolder>')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print ('validation.py -i <infolder> -o <outfolder>')
+            sys.exit()
+        elif opt in ("-i", "--infolder"):
+            inpath = Path(arg)
+        elif opt in ("-o", "--outfolder"):
+            outpath = Path(arg)
+
+    run_validation(inpath, outpath)
+
+if __name__ == "__main__":
+   main(sys.argv[1:])
 
