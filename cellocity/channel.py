@@ -31,7 +31,6 @@ class Channel(object):
         :type sliceIndex: int
 
         """
-        assert type(tiffFile) == tifffile, "Channel has to be created with a Tifffile object!"
 
         self.chIndex = chIndex
         self.sliceIdx = sliceIndex
