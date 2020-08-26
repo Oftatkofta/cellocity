@@ -17,9 +17,12 @@ setup(
         "docutils>=0.16",
         "tifffile==2020.2.16",
         "opencv-python>4.2.0",
+        "cython>=0.29.19",
+        "OpenPIV==0.22.2",
         "numpy>=1.18.1",
         "pandas>=1.0.1",
-        "matplotlib>=3.2.1"
+        "matplotlib>=3.2.1",
+        "seaborn>=0.10.1"
         ],
     author='Jens Eriksson',
     author_email='jens.eriksson@imbim.uu.se',
