@@ -56,7 +56,7 @@ average frame interval.
 		channel_0.fixFrameInterval()
 
   .. note::
-	Checking and fixing the frame interval is currently only possible on MicroManager ome.tif files.
+	Checking and fixing the frame interval is currently only possible on MicroManager ome.tif files. Individual frame timestamps are lost when saving in ImageJ.
 
 Channel objects have convenient preprocessing methods, such as trimming frames
 and temporal median filtering. Let's start by trimming our newly created channel to
@@ -69,7 +69,7 @@ frames 10-60, meaning we discard frames 0-9 and from frame 60 onward to the end.
 
 Now let's employ a temporal median filter, meaning we do a median filtering over time.
 This will have the effect of filtering out fast moving free-floating debris, thus 
-greatly reducing the noise in the final analysis. This is done by creating a child ``MedianChannel``
+greatly reducing the noise in the final analysis. This is done by creating a child :class:`cellocity.channel.MedianChannel`
 object. Median filtering can be done with a gliding window (default), or by binning the frames.
 ``MedianChannel`` takes care of properly recalculating frame intervals in either case. The default 
 frame sampling interval is 3.
