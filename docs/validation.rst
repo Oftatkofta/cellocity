@@ -45,7 +45,9 @@ This dataset allowed us compare the "gold standard" of cell cynamics analysis, P
 Our conclusion mirror what was found in :cite:`Vig2016`, which is that optical flow analysis is indeed superior to PIV analysis in both accuracy and efficiency.
 The following section will substantiate this finding. All analysis were run on a early 2020 Dell XPS 15 7590 laptop running Windows 10. The dataset has been deposited in to the BioStudies database with the accession number `S-BSST461 <https://www.ebi.ac.uk/biostudies/studies/S-BSST461>`_ and can be downloaded from there.
 
-All the validation figures can be genereated on your local install by running the following code::
+All the validation figures can be genereated on your local install by running the following:
+
+ .. code-block:: python
 	
 	from cellocity import validation
 	from pathlib import Path
