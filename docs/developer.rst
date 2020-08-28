@@ -1,12 +1,12 @@
 Developer Information
 =====================
 
-This section contains information relevant for developing and extending Cellocity functionality. It also contains random tidbits of general info that I have uncovered during the development process of this framework. I present it here in the hope that someone may find it useful.
+This section contains information relevant for developing and extending Cellocity functionality. It also contains random tidbits of general information that I have uncovered during the development process of this framework. I present it here in the hope that someone may find it useful.
 
 Contributing to Cellocity
 -------------------------
 
-Contributions are welcome and appreciated, just fork the Github repository an create a `pull request <https://github.com/Oftatkofta/cellocity/pulls>`_. Information on how to do so can be found `here <https://github.com/MarcDiethelm/contributing/blob/master/README.md>`_. Before you do so, please make sure that the documentaion strings are written in reStructuredText so that `Sphinx-autodoc <https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html>`_ can generate automatic API documentation. It would also be greatly appreciated if the general architecture of ``Channel``, ``Analysis``, and ``Analyzer`` objects is maintained.
+Contributions are welcome and appreciated. Just fork the Github repository and create a `pull request <https://github.com/Oftatkofta/cellocity/pulls>`_. Information on how to do so can be found `here <https://github.com/MarcDiethelm/contributing/blob/master/README.md>`_. Before you do so, please make sure that the documentation strings are written in reStructuredText so that `Sphinx-autodoc <https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html>`_ can generate automatic API documentation. It would also be greatly appreciated if the general architecture of ``Channel``, ``Analysis``, and ``Analyzer`` objects is maintained.
 
 
 Bug reports and feature requests
@@ -20,24 +20,24 @@ A note on metadata and file formats
 -------------------------------------
 
 It goes without saying that you need to have a well calibrated microscope that
-writes correct metadata into your image files, in order to perform meaningful cell dynamic analysis. The minimum amount of information you need is data on pixel size and the time resolution between frames. Image format specific metadata, such as Micromanager-metadata and IJmetadata contain this information and is the primary source of this information throughout Cellocity.
+writes correct metadata into your image files, in order to perform meaningful cell dynamics analysis. The minimal amount of information needed is data on the pixel size and the time resolution between frames. Image format specific metadata, such as Micromanager-metadata and IJmetadata contain this information and constitute the primary source used throughout Cellocity.
 
-Micromanager saves its metadata in a private IFD tag (51123), which ``Tifffile`` reads in as a ``dict``, accessible via ``tif.micromanager_metadata``. The structure of the dictionary is, annoyingly, slightly different between the 1.4.23, 2.0-beta, and 2.0-gamma branches of Micromanager. In 1.4.23 and 2.0-gamma the frame interval is stored in ``tif.micromanager_metadata['Summary']['Interval_ms']``, but in 2.0-beta it is stored in ``tif.micromanager_metadata['Summary']['WaitInterval']``. The discrepancy is probably due to the fact that this value records the wait interval time between frames of the acquisition, not the _actual_ frame interval. It is possible to setup a acquisition with a frame interval that the microscope physically can't keep up with. Therefore, Cellocity performs an additional sanity check of the individual time stamps of the frames (see ``Channel.doFrameIntervalSanityCheck()``, in order to make sure you don't run in to this problem during analysis. 
+Micromanager saves its metadata in a private IFD tag (51123), which ``Tifffile`` reads in as a ``dict``, accessible via ``tif.micromanager_metadata``. The structure of the dictionary is, annoyingly, slightly different between the 1.4.23, 2.0-beta, and 2.0-gamma branches of Micromanager. In 1.4.23 and 2.0-gamma the frame interval is stored in ``tif.micromanager_metadata['Summary']['Interval_ms']``, but in 2.0-beta it is stored in ``tif.micromanager_metadata['Summary']['WaitInterval']``. The discrepancy is probably due to the fact that this value records the wait interval time between frames of the acquisition, not the _actual_ frame interval. It is possible to setup an acquisition with a frame interval that the microscope physically cannot keep up with. Therefore, Cellocity performs an additional sanity check of the individual time stamps of the frames (see ``Channel.doFrameIntervalSanityCheck()``), in order to make sure you do not run into this problem during analysis. 
 
 
-Pixel resolution Micromanager vs ImageJ .tif files
+Pixel resolution in Micromanager vs ImageJ .tif files
 --------------------------------------------------
-Relevant standard tags in the `TIFF specification <https://www.adobe.io/open/standards/TIFF.html>`_ are **XResolution**, **YResolution**, and **ResolutionUnit**. The resolution tags are rational numbers, meaning they are generated by dividing two 32-bit integer values. **ResolutionUnit** is specified as being either *None*, *Inch* or *Centimeter*, no other units are specified.
+Relevant standard tags in the `TIFF specification <https://www.adobe.io/open/standards/TIFF.html>`_ are **XResolution**, **YResolution**, and **ResolutionUnit**. The resolution tags are rational numbers, meaning they are generated by dividing two 32-bit integer values. **ResolutionUnit** is specified as being either *None*, *Inch* or *Centimeter*. No other units are specified.
 
-When Micromanager saves an ome.tif it writes a rounded off value in to the XResolution and YResolution tif tags, and it sets the **ResolutionUnit** tag to CENTIMETER. This value carries less precision than the 'PixelSizeUm' entry in the custom TIFF-tag 'MicroManagerMetadata', but the TIFF is correctly readable with roughly intact size calibration data in any reader obeying the TIFF standard.
+When Micromanager saves an ome.tif it writes a rounded off value into the XResolution and YResolution tif tags, and it sets the **ResolutionUnit** tag to CENTIMETER. This value carries less precision than the 'PixelSizeUm' entry in the custom TIFF-tag 'MicroManagerMetadata', but the TIFF is correctly readable with roughly intact size calibration data in any reader obeying the TIFF standard.
 
-When ImageJ (v. 1.52p) saves a Hyperstack as tif, it writes the 'Pixel Width' and 'Pixel Height' values in to the **XResolution** and **YResolution** tags with higher precision. However, it sets the **ResolutionUnit** tag to *None*, probably because microns, the standard micrograph unit, are not specified in the TIFF standard.
+When ImageJ (v. 1.52p) saves a Hyperstack as tif, it writes the 'Pixel Width' and 'Pixel Height' values into the **XResolution** and **YResolution** tags with higher precision. However, it sets the **ResolutionUnit** tag to *None*, probably because microns, the standard micrograph unit, are not specified in the TIFF standard.
 
-Creating your own image format reader.
+Creating your own image format reader
 --------------------------------------
 
-If you want to develop your own reader for your microscope raw data, I suggest you look up the `Tiffile project <https://pypi.org/project/tifffile/>`_. It already implements reading of many common tif-formats from multiple microscope vendors. It is a trivial addition to tweak the Channel object and create your own subclass version specific to your file format, since Channel objects are basically extensions of Tifffile objects anyway.
+If you want to develop your own reader for your microscope raw data, I suggest you look up the `Tiffile project <https://pypi.org/project/tifffile/>`_. It already implements reading of many common tif-formats from multiple microscope vendors. It is a trivial addition to tweak the Channel object and create your own subclass version specific to your file format, since Channel objects are basically extensions of Tifffile objects.
 
-Pragmatically, the easiest way to get your non-supported data in to Cellocity is to open it in FIJI with the Bioformats importer and to resave it as a hyperstack tif (making sure that the relevant image properties are set correctly). Then you can use the ImageJ-reading capabilities built in to Cellocity and tiffile.
+Pragmatically, the easiest way to get your non-supported image data set into Cellocity is to open it in FIJI with the Bioformats importer and thereafter resave it as a hyperstack tif (making sure that the relevant image properties are set correctly). Then, you can use the ImageJ-reading capabilities built in to Cellocity and tiffile.
 
    
