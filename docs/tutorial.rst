@@ -7,12 +7,12 @@ Step-by-step guide
 This tutorial will show you how to:
 
 1. Load a file and create a :class:`cellocity.channel.Channel` object. 
-2. Preprocess Channel object.
-3. Perform analysis by creating an Analysis object from Channel object.
-4. Extract data from the Analysis object by creating an Analyzer object.
+2. Preprocess ``Channel`` object.
+3. Prepare for analysis by creating an :class:`cellocity.analysis.Analyzer` object from the ``Channel`` object.
+4. Extract data by creating an :class:`cellocity.analysis.Analysis` object.
 
-Load a file and create a Channel object
-+++++++++++++++++++++++++++++++++++++++
+Load a file and create a ``Channel`` object
++++++++++++++++++++++++++++++++++++++++++++
  .. code-block:: python
     
     from cellocity.channel import Channel
@@ -38,11 +38,8 @@ Load a file and create a Channel object
     increasing its size somewhat. ``Channel`` objects store all image data in RAM and
     can get quite hefty for long time lapses.
 
-
-​    
 Preprocess ``Channel`` object
 +++++++++++++++++++++++++++++
-
 First, we will check if the frame interval stated in the metadata is in agreement with
 the time stamps of the individual frames in the channel (within 1%). This is done with the
 ``Channel.doFrameIntervalSanityCheck(maxDiff=0.01)`` method. If there is an discrepancy between
@@ -56,9 +53,9 @@ average frame interval.
 		channel_0.fixFrameInterval()
 
   .. note::
-	Checking and fixing the frame interval is currently only possible on MicroManager ome.tif files. Individual frame timestamps are lost when saving in ImageJ.
+	Checking and fixing the frame interval is currently only possible on MicroManager ome.tif files. Individual frame timestamps are lost when saving .tif files in ImageJ.
 
-Channel objects have convenient preprocessing methods, such as trimming frames
+``Channel`` objects have convenient preprocessing methods, such as trimming frames
 and temporal median filtering. Let's start by trimming our newly created channel to
 frames 10-60, meaning we discard frames 0-9 and from frame 60 onward to the end.
 
@@ -79,7 +76,10 @@ frame sampling interval is 3.
 	from cellocity.channel import MedianChannel
 	
 	gliding_median_channel_0 = MedianChannel(channel_0)
-	binned_4frame_median_channel_0 = MedianChannel(channel_0, doGlidingProjection=False, frameSamplingInterval=4)
+	
+	binned_4frame_median_channel_0 = MedianChannel(channel_0,
+							doGlidingProjection=False,
+							frameSamplingInterval=4)
 
 
 ``MedianChannel`` objects can also be created by calling the ``.getTemporalMedianChannel()`` method on a ``Channel``.
@@ -87,26 +87,21 @@ The following code gives identical results to the above example:
 
 .. code-block:: python
 	
-	arguments ={
-			doGlidingProjection = True,
+	arguments ={doGlidingProjection = True,
 			frameSamplingInterval=3,
 			startFrame=0,
 			stopFrame=None
 			}
-
-
-​	
 	gliding_median_channel_0 = channel_0.getTemporalMedianChannel(arguments)
-	
+		
 	arguments = {doGlidingProjection = False,
-				frameSamplingInterval=4,
-				startFrame=0,
-				stopFrame=None}
-	
+			frameSamplingInterval=4,
+			startFrame=0,
+			stopFrame=None}
 	binned_4frame_median_channel_0 = channel_0.getTemporalMedianChannel(arguments)
 
-Analysis of ``Channel`` object
-++++++++++++++++++++++++++++++
+Prepare for Analysis by creating an ``Analyzer`` object
++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 Now let's perform an optical flow analysis of our preprocessed ``Channel``. This is done
 by instantiating an ``Analyzer`` object with a ``Channel`` as argument. In this case we
@@ -151,7 +146,7 @@ processing.
 	speed_analysis_ch0.saveArrayAsTif(outdir=savepath):
 	speed_analysis_ch0.saveCSV(outdir=savepath, fname="mySpeeds.csv", tunit="s")
 
-That's it! If you want more detailed information, please check the :doc:`api` , the :doc:`validation` or the :doc:`developer`.
+That's it! If you want more detailed information, please check the :doc:`api` , the :doc:`validation` contains more examples of different ``Alalysis`` objects in use, and the :doc:`developer` contains information on how to submit a bug report.
 	
 	
 
