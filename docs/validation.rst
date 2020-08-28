@@ -86,7 +86,7 @@ Cell monolayers grown on loose hydrogel support, as those used in our validation
 	
 .. figure:: _static/40X_vector_panels_compare.png
     :align: left
-    :alt: Figure comparing vector visulalization from Optical Flow vs PIV
+    :alt: Figure comparing vector visualization from Optical Flow vs PIV
     
 
     Figure showing flow vector visualization of a 600x600 crop from the bottom right corner of the final frame from the 40X magnification files in the dataset. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects. Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
@@ -104,15 +104,16 @@ Quantifying how well the vector field is aligned allows us to confirm our intita
 
 .. figure:: _static/60X_diagonal_compare.gif
     :align: left
-    :alt: Figure comparing vector visulalization from Optical Flow vs PIV
+    :alt: Figure comparing vector visualization from Optical Flow vs PIV
     
+
     Figure showing flow vector visualization of the diagonal translation at 60X magnification. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects, ``OpenPivAnalyzer`` (left) and ``FarenbackAnalyzer`` (right). Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
 
 
 
 Optical Flow and PIV analysis of transmitted light microscopy time-lapse data is commonly used in studies of confluent cell layer dynamics phenomena, for example collective cell migration and wound healing.
 This is particularly relevant for studies of primary cells, due to the difficulty in reliably labelling these for cell tracking.
-To our knowledge, there has not been an systematic evaluation of different pre-processing modalities and optical flow analysis algorithms on actual real-world, non-simulated, microscopy data. We therefore anticipate that others will find this software package and the validation dataset described in this chapter useful.
+To our knowledge, there has not been a systematic evaluation of different pre-processing modalities and optical flow analysis algorithms on actual real-world, non-simulated, microscopy data. We therefore anticipate that others will find this software package and the validation dataset described in this chapter useful.
 
  
 
