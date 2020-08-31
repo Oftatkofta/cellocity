@@ -45,7 +45,9 @@ This dataset allowed us compare the "golden standard" of cell layer dynamics ana
 Our conclusion mirror what was found in :cite:`Vig2016`, which is that Optical Flow analysis is indeed superior to PIV analysis, both with respect to accuracy and efficiency.
 The following section will substantiate this finding. All analyses were run on a early 2020 Dell XPS 15 7590 laptop, running Windows 10. The dataset has been deposited into the BioStudies database with the accession number `S-BSST461 <https://www.ebi.ac.uk/biostudies/studies/S-BSST461>`_ and can be downloaded from there.
 
-All the validation figures can be re-generated on your local install by running the following code::
+All the validation figures can be re-generated on your local install by running the following code:
+
+.. code-block:: python
 	
 	from cellocity import validation
 	from pathlib import Path

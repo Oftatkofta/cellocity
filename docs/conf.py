@@ -24,7 +24,7 @@ author = 'Jens Eriksson'
 master_doc = 'index'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1alpha'
+release = '0.1.2'
 
 
 # -- General configuration ---------------------------------------------------
@@ -32,8 +32,7 @@ release = '0.0.1alpha'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', 'sphinxcontrib.bibtex'
-]
+extensions = ['sphinx.ext.autodoc', 'sphinxcontrib.bibtex']
 
 #autoapi_dirs = ['../cellocity']
 

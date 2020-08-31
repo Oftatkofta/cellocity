@@ -22,7 +22,8 @@ setup(
         "numpy>=1.18.1",
         "pandas>=1.0.1",
         "matplotlib>=3.2.1",
-        "seaborn>=0.10.1"
+        "seaborn>=0.10.1",
+        "sphinxcontrib-bibtex==1.0.0"
         ],
     author='Jens Eriksson',
     author_email='jens.eriksson@imbim.uu.se',

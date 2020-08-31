@@ -1,3 +1,10 @@
+# This module contains the code used for the "Validaton of the Cellocity software" section of the documentation.
+# The code herein performs a sanity check on your Cellocity installation by running a series of test functions
+# on all files in the inpath.
+# Cellocity has been validated on a set of images of a fixed monolayer translated 1 um in x, y, or x+y between frames.
+# It's natively not a time lapse stack data set, so some custom manipulation of the Channel objects will have to be done
+# in order to make it appear as though the image stacks come from a time lapse set with a 1 Hz imaging frame rate.
+
 import sys
 import getopt
 from pathlib import Path
@@ -7,14 +14,32 @@ from cellocity.analysis import FarenbackAnalyzer, OpenPivAnalyzer, FlowSpeedAnal
 from matplotlib import pyplot as plt
 import pandas as pd
 import seaborn as sns
+from ftplib import FTP
 
-# This module contains the code used for the "Validaton of the Cellocity software" section of the documentation.
-# The code herein performs a sanity check on your Cellocity installation by running a series of test functions
-# on all files in the inpath.
-# Cellocity has been validated on a set of images of a fixed monolayer translated 1 um in x, y, or x+y between frames.
-# It's natively not a time lapse stack data set, so some custom manipulation of the Channel objects will have to be done
-# in order to make it appear as though the image stacks come from a time lapse set with a 1 Hz imaging frame rate.
+def downloadDataset(savepath, email="youremail@domain.com"):
+    """
+    Connects to the BioStudies FTP site and downloads the entire dataset to the savepath folder.
 
+    :param savepath: Path to savefolder
+    :type savepath: Path
+    :param email: email is used as the password when downloading as an anonymous user.
+    :type email: str
+    :return: None
+    """
+
+    ftp = FTP('ftp.biostudies.ebi.ac.uk')
+    ftp.login(user='anonymous', passwd=email)
+    ftp.cwd('biostudies/pub/S-BSST/S-BSSTxxx461/S-BSST461/Files')
+    #biostudies-test/nfs/S-BSST/S-BSSTxxx461/S-BSST461
+
+    def _grabFile(fname):
+
+        saveme = savepath / fname
+        localfile = open(saveme, 'wb')
+        ftp.retrbinary('RETR ' + filename, localfile.write, 1024)
+
+        ftp.quit()
+        localfile.close()
 
 def convertChannel(fname, finterval=1):
     """
@@ -228,26 +253,4 @@ def run_validation(inpath, outpath):
     plt.savefig(savename)
     #plt.show()
 
-def main(argv):
-
-    inputfolder = ''
-    outputfolder = ''
-    try:
-        opts, args = getopt.getopt(argv,"hi:o:",["infolder=","outfolder="])
-    except getopt.GetoptError:
-        print ('validation.py -i <infolder> -o <outfolder>')
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt == '-h':
-            print ('validation.py -i <infolder> -o <outfolder>')
-            sys.exit()
-        elif opt in ("-i", "--infolder"):
-            inpath = Path(arg)
-        elif opt in ("-o", "--outfolder"):
-            outpath = Path(arg)
-
-    run_validation(inpath, outpath)
-
-if __name__ == "__main__":
-   main(sys.argv[1:])
 
