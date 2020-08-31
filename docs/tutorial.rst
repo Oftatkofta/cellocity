@@ -149,7 +149,7 @@ processing.
 	speed_analysis_ch0.saveArrayAsTif(outdir=savepath):
 	speed_analysis_ch0.saveCSV(outdir=savepath, fname="mySpeeds.csv", tunit="s")
 
-That's it! If you want more detailed information, please check the :doc:`api` , the :doc:`validation` contains more examples of different ``Alalysis`` objects in use, and the :doc:`developer` contains information on how to submit a bug report.
+That's it! If you want more detailed information, please check the :doc:`api` , the :doc:`validation` contains more examples of different ``Analysis`` objects in use, and the :doc:`developer` contains information on how to submit a bug report.
 	
 	
 
