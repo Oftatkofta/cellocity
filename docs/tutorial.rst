@@ -120,6 +120,9 @@ implemented. Cellocity handles all unit conversions automatically in the backgro
 	fb_analyzer_ch0 = FarenbackAnalyzer(channel = gliding_median_channel_0, unit = "um/h")
 	fb_analyzer_ch0.doFarenbackFlow()
 
+Extract data by creating an ``Analysis`` object.
+++++++++++++++++++++++++++++++++++++++++++++++++
+
 Great, now we have calculated the optical flow of channel_0 with the default parameters. Now its
 time to extract data. This is done by creating ``Analysis`` objects. In our case we want to analyse
 the flow speeds of our channel. To do this we can utilize the ``FlowSpeedAnalysis`` class, which works on
