@@ -239,17 +239,17 @@ def run_validation(inpath, outpath):
     df = pd.read_csv(saveme)
 
     timeplot = make_proces_time_plot(df)
-    savename = outpath / "time_plot.png"
+    savename = outpath / "process_time_compare.png"
     plt.savefig(savename)
     #plt.show()
 
     speed_plot = make_speed_plot(df)
-    savename = outpath / "speed_plot.png"
+    savename = outpath / "avg_speed_compare.png"
     plt.savefig(savename)
     #plt.show()
 
     ai_plot = make_ai_plot(df)
-    savename = outpath / "alignementindex_plot.png"
+    savename = outpath / "alignment_index_compare.png"
     plt.savefig(savename)
     #plt.show()
 
