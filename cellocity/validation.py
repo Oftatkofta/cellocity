@@ -26,18 +26,18 @@ def downloadDataset(savepath, email="youremail@domain.com"):
     :type email: str
     :return: None
     """
-
+    
     ftp = FTP('ftp.biostudies.ebi.ac.uk')
     ftp.login(user='anonymous', passwd=email)
     ftp.cwd('biostudies/pub/S-BSST/S-BSSTxxx461/S-BSST461/Files')
     #biostudies-test/nfs/S-BSST/S-BSSTxxx461/S-BSST461
-
+    
     def _grabFile(fname):
-
+    
         saveme = savepath / fname
         localfile = open(saveme, 'wb')
         ftp.retrbinary('RETR ' + filename, localfile.write, 1024)
-
+    
         ftp.quit()
         localfile.close()
 
@@ -50,13 +50,13 @@ def convertChannel(fname, finterval=1):
     :return: Channel
     :rtype: channel.Channel
     """
-
+    
     with tifffile.TiffFile(fname, multifile=False) as tif:
         name = str(fname).split(".")[0]
         name = name.split("\\")[-1][:-8]
         ch = Channel(0, tif, name)
         ch.finterval_ms = finterval * 1000
-
+    
     return ch
 
 def convertMedianChannel(fname, finterval=1):
@@ -68,14 +68,14 @@ def convertMedianChannel(fname, finterval=1):
     :return: MedianChannel with default 3-frame gliding window
     :rtype: channel.MedianChannel
     """
-
+    
     with tifffile.TiffFile(fname, multifile=False) as tif:
         name = str(fname).split(".")[0]
         name = name.split("\\")[-1][:-8]
         ch = Channel(0, tif, name)
         ch.finterval_ms = finterval * 1000
         ch = MedianChannel(ch)
-
+    
     return ch
 
 def make_channels(inpath):
@@ -86,16 +86,16 @@ def make_channels(inpath):
     :return: list of Channels
     :rtype: list
     """
-
+    
     out=[]
-
+    
     for f in inpath.iterdir():
         if (f.suffix == ".tif") and f.is_file():
             chan = convertChannel(f)
             out.append(chan)
             m_chan = convertMedianChannel(f)
             out.append(m_chan)
-
+    
     return out
 
 def processAndMakeDf(ch_list):
@@ -110,9 +110,9 @@ def processAndMakeDf(ch_list):
     :return: Pandas DataFrame with data from analysis
     :rtype: pandas.DataFrame
     """
-
+    
     alldata = pd.DataFrame()
-
+    
     for ch in ch_list:
         a1 = make_fb_flow_analyzer(ch)
         alldata = alldata.append(get_data_as_df(a1, "optical_flow"))
@@ -144,7 +144,7 @@ def make_speed_plot(df):
                     hue="displacement", col="filter",
                     data=df, kind="box",
                     height=8, aspect=.7)
-
+    
     return sns_plot
 
 def make_ai_plot(df):
@@ -156,7 +156,7 @@ def make_ai_plot(df):
                     hue="displacement", col="filter",
                     data=df, kind="box",
                     height=8, aspect=.7)
-
+    
     return sns_plot
 
 
@@ -169,7 +169,7 @@ def make_fb_flow_analyzer(ch):
     """
     analyzer = FarenbackAnalyzer(ch, "um/s")
     analyzer.doFarenbackFlow()
-
+    
     return analyzer
 
 def make_piv_analyzer(ch):
@@ -178,11 +178,11 @@ def make_piv_analyzer(ch):
 
     :param ch: channel.Channel
     :return: anlysis.OpenPivAnalyzer
-
+    
     """
     analyzer = OpenPivAnalyzer(ch, "um/s")
     analyzer.doOpenPIV()
-
+    
     return analyzer
 
 def get_data_as_df(analyzer, analyzername):
@@ -196,35 +196,35 @@ def get_data_as_df(analyzer, analyzername):
     :type analyzer: analysis.FlowAnalyzer
     :param analyzername: Name of FlowAnalyzer
     :type analyzername: str
-
+    
     :return: pd.DataFrame containing results and information derived from channel.name
     :rtype: pandas.DataFrame
     """
-
+    
     speed_analysis = FlowSpeedAnalysis(analyzer)
     speed_analysis.calculateAverageSpeeds()
     ai_analysis = AlignmentIndexAnalysis(analyzer)
     ai_analysis.calculateAverage()
-
+    
     df = speed_analysis.getAvgSpeedsAsDf()
     df["aligmnent_index"] = ai_analysis.getAvgAlignIdxAsDf()
-
+    
     df["analyzer"] = analyzername
     df["process_time"] = str(round(analyzer.process_time, 2))
     df["file_name"] = analyzer.channel.name
-
+    
     fields = analyzer.channel.name.split("_")
     magnification = fields[3]
     displacemet = fields[4] + " " + fields[5]
     df["magnification"] = magnification
     df["displacement"] = displacemet
-
+    
     if "MED" in analyzer.channel.name:
         filter = "Median"
     else:
         filter = "None"
     df["filter"] = filter
-
+    
     return df
 
 
@@ -237,17 +237,17 @@ def run_validation(inpath, outpath):
     df = processAndMakeDf(ch_list)
     df.to_csv(saveme)
     df = pd.read_csv(saveme)
-
+    
     timeplot = make_proces_time_plot(df)
     savename = outpath / "process_time_compare.png"
     plt.savefig(savename)
     #plt.show()
-
+    
     speed_plot = make_speed_plot(df)
     savename = outpath / "avg_speed_compare.png"
     plt.savefig(savename)
     #plt.show()
-
+    
     ai_plot = make_ai_plot(df)
     savename = outpath / "alignment_index_compare.png"
     plt.savefig(savename)
