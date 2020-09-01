@@ -26,7 +26,7 @@ class Analyzer(object):
 
     def getProgress(self):
         """
-        Returnas current progress in the interval 0-100.
+        Returns current progress in the interval 0-100.
 
         :return: Percentage progress of analysis
         :rtype: float
@@ -415,7 +415,7 @@ class FlowAnalysis(Analysis):
         Draws flow superimposed on the background channel as an 8-bit array.
 
         Draws a subset of the flow as lines on top of the background channel. Because the flow represents what happens
-        between frames, the flow is not drawn on the las frame of the channel, which is discarded. Creates and populates
+        between frames, the flow is not drawn on the last frame of the channel, which is discarded. Creates and populates
         self.drawnframes to store the drawn array. If the underlying channel object is 16-bit, it will converted to 8bit
         with the `channel.normailzation_to_8bit()` function.
 
@@ -533,7 +533,7 @@ class FlowSpeedAnalysis(FlowAnalysis):
     """
     Handles all analysis and data output of speeds from FlowAnalyzers.
 
-    Calculates pixel-by pixel speeds from flow vectors.
+    Calculates pixel-by-pixel speeds from flow vectors.
 
     """
     def __init__(self, analyzer):
@@ -544,7 +544,7 @@ class FlowSpeedAnalysis(FlowAnalysis):
 
     def calculateSpeeds(self, scaler=None):
         """
-        Calculates speeds from the flows in parent Anlayzer
+        Calculates speeds from the flows in parent Analyzer
 
         Turns a (t, x, y, uv) flow numpy array with u/v component vectors in to a (t, x, y) speed array. Populates
         self.speeds. Scales all the output by multiplying with scaler, defaluts to using the self.scaler from the base
@@ -779,7 +779,7 @@ class AlignmentIndexAnalysis(FlowAnalysis):
     """
     Calculates the alignment index for the flow vectors in a FlowAnalyzer object.
 
-    Alignment index is defined as in Malinverno et. al 2017. For every frame the ai is the average of the dot
+    Alignment index (AI) is defined as in Malinverno et. al 2017. For every frame the AI is the average of the dot
     products of the mean velocity vector with each individual vector, all divided by the product of their
     magnitudes.
 
@@ -795,7 +795,7 @@ class AlignmentIndexAnalysis(FlowAnalysis):
         """
         Calculates the aligment index for each pixel in base FlowAnalyzer flow array and populates self.alignment_idxs
 
-        :return: nunpy array with same size as analyzer flows, where every entry is the alignment index in that pixel
+        :return: numpy array with same size as analyzer flows, where every entry is the alignment index in that pixel
         :rtype: numpy.ndarray
         """
         flows = self.analyzer._getFlows()
@@ -959,11 +959,11 @@ class AlignmentIndexAnalysis(FlowAnalysis):
 
 class IopAnalysis(FlowAnalysis):
     """
-    Calculates the instantaneous order parameter (iop) for each frame of flow see Malinverno et. al 2017 for a more
-    detailed explanation.
+    Calculates the instantaneous order parameter (iop) for each frame of flow (see Malinverno et. al 2017 for a more
+    detailed explanation).
 
     The iop is a measure of how similar the vectors in a field are, which takes in to account both the
-    direcion and magnitudes of the vectors. iop is always between 0 and 1, with iop = 1 being a perfectly uniform field
+    direction and magnitudes of the vectors. iop is always between 0 and 1, with iop = 1 being a perfectly uniform field
     of identical vectors, and iop = 0 for a perfectly random field.
     """
     def __init__(self, flowanalyzer):
