@@ -308,7 +308,7 @@ class Channel(object):
     def getPages(self):
         """
         Returns the TiffPages that make up the channel data
-    
+        
         :return: a list of the TiffPages extracted from the Tifffile used to create the Channel
         :rtype: list
         """
@@ -363,7 +363,7 @@ class Channel(object):
     
         kwargs and defaults are: {doGlidingProjection = True, frameSamplingInterval=3, startFrame=0, stopFrame=None}
         Defaults to a gliding 3 frame temporal median of the whole channel if no kwargs are given.
-    
+        
         :return: A MedianChannel object based on the current channel where self.array has been replaced by a numpy array
                  of the type float32 representing the temporal median of Channel data.
         :rtype: MedianChannel
@@ -484,7 +484,7 @@ class MedianChannel(Channel):
 
     Temporal median filtering is very useful when performing optical flow based analysis of time lapse microscopy data,
     because it filters out fast moving free-floating debris from the dataset. Note that the median array will be shorter
-    than the original array. In the default case, if a temporal median of 3 frames is applied, then the output
+    than the original array. In the default case, if a temporal median of 3 frames is applied, then the the output
     array will contain 3-1 = 2 frames less than the input if a gliding projection (default) is performed.
     
     """

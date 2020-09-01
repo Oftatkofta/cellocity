@@ -27,7 +27,7 @@ class Analyzer(object):
     def getProgress(self):
         """
         Returns current progress in the interval 0-100.
-    
+
         :return: Percentage progress of analysis
         :rtype: float
     
@@ -545,7 +545,7 @@ class FlowSpeedAnalysis(FlowAnalysis):
     def calculateSpeeds(self, scaler=None):
         """
         Calculates speeds from the flows in parent Analyzer
-    
+        
         Turns a (t, x, y, uv) flow numpy array with u/v component vectors in to a (t, x, y) speed array. Populates
         self.speeds. Scales all the output by multiplying with scaler, defaults to using the self.scaler from the base
         FlowAnalyzer object if the scaler argument is ``None``.
@@ -793,7 +793,7 @@ class AlignmentIndexAnalysis(FlowAnalysis):
     def calculateAlignIdxs(self):
         """
         Calculates the aligment index for each pixel in base FlowAnalyzer flow array and populates self.alignment_idxs
-    
+        
         :return: numpy array with same size as analyzer flows, where every entry is the alignment index in that pixel
         :rtype: numpy.ndarray
         """
