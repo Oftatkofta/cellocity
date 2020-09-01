@@ -1,5 +1,5 @@
-# This module contains the code used for the "Validaton of the Cellocity software" section of the documentation.
-# The code herein performs a sanity check on your Cellocity installation by running a series of test functions
+# This module contains the code used for the "Validaton of the Cellocity Software" section of the documentation.
+# The code herein performs a sanity check on your Cellocity installation, by running a series of test functions
 # on all files in the inpath.
 # Cellocity has been validated on a set of images of a fixed monolayer translated 1 um in x, y, or x+y between frames.
 # It's natively not a time lapse stack data set, so some custom manipulation of the Channel objects will have to be done
