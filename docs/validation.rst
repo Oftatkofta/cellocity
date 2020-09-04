@@ -42,7 +42,7 @@ The general structure of the dataset is outlined in the table below.
 +---------------------------------+-----------+---------------+-----------------+--------------------+--------------------+------------------------------------------------------------+
 
 This dataset allowed us compare the "golden standard" of cell layer dynamics analysis, Particle Image Velocimetry (PIV) analysis, with the less frequently used Optical Flow analysis.
-Our conclusion mirror what was found in :cite:`Vig2016`, which is that Optical Flow analysis is indeed superior to PIV analysis, both with respect to accuracy and efficiency.
+Our conclusion mirror what was found in [#vig]_, which is that Optical Flow analysis is indeed superior to PIV analysis, both with respect to accuracy and efficiency.
 The following section will substantiate this finding. All analyses were run on a early 2020 Dell XPS 15 7590 laptop, running Windows 10. The dataset has been deposited into the BioStudies database with the accession number `S-BSST461 <https://www.ebi.ac.uk/biostudies/studies/S-BSST461>`_ and can be downloaded from there.
 
 All the validation figures can be re-generated on your local install by running the following code:
@@ -115,6 +115,6 @@ To our knowledge, there has not been a systematic evaluation of different pre-pr
 
 References
 ----------
-.. bibliography:: bibliography.bib
-   :style: plain
-   :cited:
+
+..  [#vig] Dhruv K. Vig and Alex E. Hamby and Charles W. Wolgemuth. On the Quantification of Cellular Velocity Fields. **Biophysical Journal**, 110:1469-1475, 2016. `doi:10.1016/j.bpj.2016.02.032. <https://doi.org/10.1016/j.bpj.2016.02.032>`_
+
