@@ -7,7 +7,7 @@ Step-by-step guide
 This tutorial will show you how to:
 
 1. Load a file and create a :class:`cellocity.channel.Channel` object. 
-2. Preprocess ``Channel`` object.
+2. Preprocess the ``Channel`` object.
 3. Prepare for analysis by creating an :class:`cellocity.analysis.Analyzer` object from the ``Channel`` object.
 4. Extract data by creating an :class:`cellocity.analysis.Analysis` object.
 
@@ -119,6 +119,10 @@ implemented. Cellocity handles all unit conversions automatically in the backgro
 	
 	fb_analyzer_ch0 = FarenbackAnalyzer(channel = gliding_median_channel_0, unit = "um/h")
 	fb_analyzer_ch0.doFarenbackFlow()
+
+.. note::
+  Quite a lot of effort has gone in to selecting sensible default parameters that work well for microscopy data for the ``FlowAnalyzer`` objects ``FarenbackAnalyzer`` and ``OpenPivAnalyzer``, as is demonstrated in the :doc:`validation` section. 
+
 
 Extract data by creating an ``Analysis`` object.
 ++++++++++++++++++++++++++++++++++++++++++++++++
