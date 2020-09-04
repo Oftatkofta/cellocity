@@ -12,8 +12,8 @@ Welcome to Cellocity's documentation!
 
    introduction
    tutorial
-   developer
    validation
+   developer
    api
 
 Indices and tables
