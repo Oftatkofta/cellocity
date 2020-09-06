@@ -101,7 +101,7 @@ Cell monolayers grown on loose hydrogel support, as those used in our validation
 
 Qualitative vector field comparison
 -----------------------------------
-	
+
 .. figure:: _static/40X_vector_panels_compare.png
     :align: left
     :alt: Figure comparing vector visualization from Optical Flow vs PIV
@@ -141,5 +141,5 @@ To our knowledge, there has not been a systematic evaluation of different pre-pr
 References
 ----------
 
-..  [#vig] Dhruv K. Vig and Alex E. Hamby and Charles W. Wolgemuth. On the Quantification of Cellular Velocity Fields. *Biophysical Journal*, 110:1469-1475, 2016. `doi:10.1016/j.bpj.2016.02.032. <https://doi.org/10.1016/j.bpj.2016.02.032>`_
+..  [#vig] Dhruv K. Vig, Alex E. Hamby and Charles W. Wolgemuth. On the Quantification of Cellular Velocity Fields. *Biophysical Journal*, 110:1469-1475, 2016. `doi:10.1016/j.bpj.2016.02.032. <https://doi.org/10.1016/j.bpj.2016.02.032>`_
 
