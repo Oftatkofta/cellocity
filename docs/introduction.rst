@@ -103,7 +103,7 @@ If something is unclear or if you are in need of support, please contact the dev
 
 References
 ----------
-.. bibliography:: bibliography.bib
+.. bibliography:: ../paper.bib
    :style: plain
    :cited:
 
