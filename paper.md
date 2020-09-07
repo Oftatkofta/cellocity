@@ -13,7 +13,7 @@ authors:
     affiliation: 2
   - name: Mikael E. Sellin
     orcid: 0000-0002-8355-0803
-    affiliation:1
+    affiliation: 1
 affiliations:
  - name: Science for Life Laboratory, Department of Medical Biochemistry and Microbiology, Uppsala University
    index: 1
