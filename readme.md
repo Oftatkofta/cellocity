@@ -9,4 +9,3 @@ Cellocity can create vector field visualizations, speed graphs, and multiple adv
 ## Documentation
 
 Documentation is available at [Read the Docs](https://cellocity.readthedocs.io/en/latest/).
-
