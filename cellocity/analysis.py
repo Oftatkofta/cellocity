@@ -970,26 +970,24 @@ class IopAnalysis(FlowAnalysis):
         :type flowanalyzer: analysis.FlowAnalyzer
         """
         super().__init__(flowanalyzer)
+        self.iops = None
 
+    def _msv(self, u, v):  # Mean Square Velocity
+        """
+         Calculates the mean square velocity of one frame from flow data
 
-    def _rms(self, frame): #Root Mean Square Velocity
+        :param u:
+            2D numpy array with the u component of velocity vectors
+        :param v:
+            2D numpy array with the v component of velocity vectors
+        :return:
+            (float) the mean square velocity of the velocity vectors in the frame
         """
-        Calculates the root mean square velocity of the input frame number from optical flow data.
-    
-        rms is the speed, or vector magnitudes, in the unit pixels/frame. This is equivalent to taking the
-        square root of the mean square velocity. rms is used in the calculation of IOP.
-    
-        :param frame: the number of the frame to be analyzed
-        :type frame: int
-        :return: the root mean square velocity of the velocity vectors in the frame
-        :rtype: float
-        """
-        u = self.analyzer.get_u_array(frame)
-        v = self.analyzer.get_v_array(frame)
-    
-        rms = np.sqrt(np.mean(np.square(u)+np.square(v))) #sqrt(u^2+v^2)
-    
-        return rms
+
+        msv = np.mean(np.square(u) + np.square(v))
+
+        return msv
+
     
     def _smvvm(self, u, v):  # Square Mean Vectorial Velocity Magnitude
         """
@@ -1008,7 +1006,7 @@ class IopAnalysis(FlowAnalysis):
     
     def _instantaneous_order_parameter(self, u, v):
         """
-        Calculates the instantaneous order parameter (iop) in one PIV frame see  Malinverno et. al 2017 for a more detailed
+        Calculates the instantaneous order parameter (iop) in one flow frame see  Malinverno et. al 2017 for a more detailed
         explanation. The iop is a measure of how similar the vectors in a field are, which takes in to account both the
         direcions and magnitudes of the vectors. iop always between 0 and 1, with iop = 1 being a perfectly uniform field
         of identical vectors, and iop = 0 for a perfectly random field.
@@ -1021,3 +1019,89 @@ class IopAnalysis(FlowAnalysis):
             (float) iop of vector field
         """
         return self._smvvm(u, v) / self._msv(u, v) #square_mean_vectorial_velocity_magnitude/Mean Square Velocity
+
+    def calculateIops(self):
+        """
+        Calculates the IOP for each frame in base FlowAnalyzer flow array and populates self.iops
+
+        :return: list of the IOP from each frame
+        :rtype: list
+        """
+
+        flows = self.analyzer._getFlows()
+        self.iops = []
+
+        for frame in range(flows.shape[0]):
+            u = self.analyzer.get_u_array(frame)
+            v = self.analyzer.get_v_array(frame)
+            self.iops.append(self._instantaneous_order_parameter(u, v))
+
+        return self.iops
+
+    def getIops(self):
+        """
+        Returns the instantaneous order parameter for Analyzer
+
+        :return: list of instantaneous order parameters
+        :rtype: list
+
+        """
+        if self.iops is None:
+            self.calculateIops()
+
+        return self.iops
+
+    def getIopsAsDf(self):
+        """
+        Returns frame and iop for the frame as a Pandas DataFrame.
+
+        :return: DataFrame with 1 column for iop and index = frame number
+        :rtype: pandas.DataFrame
+        """
+
+        if self.iops is None:
+            self.calculateIops()
+
+        arr = self.getIops()
+
+        df = pd.DataFrame(arr, columns=["IOP"])
+
+        return df
+
+    def saveCSV(self, outdir, fname=None, tunit="s"):
+
+        """
+        Saves a csv of the iop per frame in outdir.
+
+        :param outdir: Directory where output is stored
+        :type outdir: pathlib.Path
+        :param fname: filename, defaults to channel name + iop.csv
+        :type fname: str
+        :param tunit: Time unit in output one of: "s", "min", "h", "days"
+        :type tunit: str
+        :return:
+        """
+
+        if fname is None:
+            fname = self.analyzer.channel.name + "_iop.csv"
+
+        arr = self.getIops()
+
+        time_multipliers = {
+            "s": 1,
+            "min": 1 / 60,
+            "h": 1 / (60 * 60),
+            "days": 1 / (24 * 60 * 60)
+        }
+        assert tunit in time_multipliers.keys(), "tunit has to be one of: " + str(time_multipliers.keys())
+
+        fr_interval_multiplier = time_multipliers.get(tunit) * (self.analyzer.channel.finterval_ms / 1000)
+
+        timepoints_abs = np.arange(0, arr.shape[0], dtype='float32') * fr_interval_multiplier
+
+        df = pd.DataFrame(arr, index=timepoints_abs, columns=["instantaneous_order_parameter"])
+        df.index.name = "Time(" + tunit + ")"
+
+        saveme = outdir / fname
+
+        df.to_csv(saveme)

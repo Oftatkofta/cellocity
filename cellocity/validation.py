@@ -5,41 +5,15 @@
 # It's natively not a time lapse stack data set, so some custom manipulation of the Channel objects will have to be done
 # in order to make it appear as though the image stacks come from a time lapse set with a 1 Hz imaging frame rate.
 
-import sys
-import getopt
 from pathlib import Path
 import tifffile
 from cellocity.channel import Channel, MedianChannel
-from cellocity.analysis import FarenbackAnalyzer, OpenPivAnalyzer, FlowSpeedAnalysis, AlignmentIndexAnalysis
+from cellocity.analysis import FarenbackAnalyzer, OpenPivAnalyzer, FlowSpeedAnalysis, AlignmentIndexAnalysis, IopAnalysis
 from matplotlib import pyplot as plt
 import pandas as pd
 import seaborn as sns
-from ftplib import FTP
 
-def downloadDataset(savepath, email="youremail@domain.com"):
-    """
-    Connects to the BioStudies FTP site and downloads the entire dataset to the savepath folder.
 
-    :param savepath: Path to savefolder
-    :type savepath: Path
-    :param email: email is used as the password when downloading as an anonymous user.
-    :type email: str
-    :return: None
-    """
-    
-    ftp = FTP('ftp.biostudies.ebi.ac.uk')
-    ftp.login(user='anonymous', passwd=email)
-    ftp.cwd('biostudies/pub/S-BSST/S-BSSTxxx461/S-BSST461/Files')
-    #biostudies-test/nfs/S-BSST/S-BSSTxxx461/S-BSST461
-    
-    def _grabFile(fname):
-    
-        saveme = savepath / fname
-        localfile = open(saveme, 'wb')
-        ftp.retrbinary('RETR ' + filename, localfile.write, 1024)
-    
-        ftp.quit()
-        localfile.close()
 
 def convertChannel(fname, finterval=1):
     """
@@ -149,7 +123,7 @@ def make_speed_plot(df):
 
 def make_ai_plot(df):
     """
-    Generates a plot comparing average frame flow speeds from dataframe
+    Generates a plot comparing average frame alignment indexes from dataframe
 
     """
     sns_plot = sns.catplot(x="analyzer", y="aligmnent_index",
@@ -157,6 +131,19 @@ def make_ai_plot(df):
                     data=df, kind="box",
                     height=8, aspect=.7)
     
+    return sns_plot
+
+
+def make_iop_plot(df):
+    """
+    Generates a plot comparing instantaneous order parameterss
+
+    """
+    sns_plot = sns.catplot(x="analyzer", y="iop",
+                           hue="displacement", col="filter",
+                           data=df, kind="box",
+                           height=8, aspect=.7)
+    plt.xlabel
     return sns_plot
 
 
@@ -187,7 +174,7 @@ def make_piv_analyzer(ch):
 
 def get_data_as_df(analyzer, analyzername):
     """
-    Creates FlowSpeedAnalysis() and AlignmentIndexAnalysis() from a FlowAnalyzer.
+    Creates FlowSpeedAnalysis(), AlignmentIndexAnalysis() and IopAnalysis() from a FlowAnalyzer.
 
     Calculates average frame speeds and alignment indexes and returns a DataFrame with the results.
 
@@ -205,9 +192,12 @@ def get_data_as_df(analyzer, analyzername):
     speed_analysis.calculateAverageSpeeds()
     ai_analysis = AlignmentIndexAnalysis(analyzer)
     ai_analysis.calculateAverage()
+    iop_analysis = IopAnalysis(analyzer)
+    iop_analysis.calculateIops()
     
     df = speed_analysis.getAvgSpeedsAsDf()
     df["aligmnent_index"] = ai_analysis.getAvgAlignIdxAsDf()
+    df["iop"] = iop_analysis.getIopsAsDf()
     
     df["analyzer"] = analyzername
     df["process_time"] = str(round(analyzer.process_time, 2))
@@ -253,4 +243,7 @@ def run_validation(inpath, outpath):
     plt.savefig(savename)
     #plt.show()
 
+    iop_plot = make_iop_plot(df)
+    savename = outpath / "iop_compare.png"
+    plt.savefig(savename)
 
