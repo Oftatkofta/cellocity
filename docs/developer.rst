@@ -3,6 +3,7 @@ Developer Information
 
 This section contains information relevant for developing and extending Cellocity functionality. It also contains random tidbits of general information that I have uncovered during the development process of this framework. I present it here in the hope that someone may find it useful.
 
+
 Contributing to Cellocity
 -------------------------
 
@@ -12,7 +13,7 @@ Contributions are welcome and appreciated. Just fork the Github repository and c
 Bug reports and feature requests
 --------------------------------
 
-Bug reposts and feature requests can be submitted `here <https://github.com/Oftatkofta/cellocity/issues/new/choose>`_.
+Bug reposts and feature requests can be submitted `through Github <https://github.com/Oftatkofta/cellocity/issues/new/choose>`_.
 
 
 
@@ -34,6 +35,7 @@ When Micromanager saves an ome.tif it writes a rounded off value into the XResol
 
 When ImageJ (v. 1.52p) saves a Hyperstack as tif, it writes the 'Pixel Width' and 'Pixel Height' values into the **XResolution** and **YResolution** tags with higher precision. However, it sets the **ResolutionUnit** tag to *None*, probably because microns, the standard micrograph unit, are not specified in the TIFF standard.
 
+
 Creating your own image format reader
 --------------------------------------
 
@@ -41,4 +43,19 @@ If you want to develop your own reader for your microscope raw data, I suggest y
 
 Pragmatically, the easiest way to get your non-supported image data set into Cellocity is to open it in FIJI with the Bioformats importer and thereafter resave it as a hyperstack tif (making sure that the relevant image properties are set correctly). Then, you can use the ImageJ-reading capabilities built in to Cellocity and tiffile.
 
-   
+
+Detailed description of the 5-:math:`{\sigma}` correlation length analysis alorithm
+-----------------------------------------------------------------------------------
+
+The 5-:math:`{\sigma}` correlation length was defined as the largest distance, :math:`r`, where the average angle between two velocity vectors :math:`r` micrometers apart was :math:`<90°` with a statistical significance level of 5 :math:`\sigma` :math:`(p=3×10^{−7})`.
+
+The algorithm steps:
+++++++++++++++++++++
+
+1. Select each of the :math:`N` vectors along the top left to bottom right diagonal of the ``FlowAnalyzer`` output velocity vector array as :math:`\mathbf{v}_0`.
+2. For each :math:`\mathbf{v}_0`, expand linearly, one row/column position at a time, along the cardinal directions (up/down/left/right) and calculate the angle between :math:`\mathbf{v}_0` and each of the vectors :math:`\mathbf{v}_r`, at each position. Do not include masked positions, or positions outside of the array. The angles :math:`\theta` for each :math:`\mathbf{v}_0` were calculated with the formula: :math:`\cos \theta = \frac{{\left\langle {{\mathbf{v}}_0 \ast {\mathbf{v}}_{{{r}}}} \right\rangle }}{{\left\langle {\left| {{\mathbf{v}}_0} \right| \ast \left| {{\mathbf{v}}_{{{r}}}} \right|} \right\rangle }}.`
+3. Record all the angles and distances between :math:`\mathbf{v}_0` and :math:`\mathbf{v}_r` for each :math:`N`, and for each time point, :math:`t`.
+4. For each distance :math:`r`, and time point :math:`t`, average all the angles recorded at this distance: :math:`\theta \left( r \right) = \frac{1}{N} \ast \mathop {\sum }\limits_{i = 1}^N \cos ^{ - 1}\left( {\frac{{\left\langle {{\mathbf{v}}_0 \ast {\mathbf{v}}_{{{r}}}} \right\rangle }}{{\left\langle {\left| {{\mathbf{v}}_0} \right| \ast \left| {{\mathbf{v}}_{{{r}}}} \right|} \right\rangle }}} \right).`
+5. Compute the angular velocity correlation length at each time point. This was defined as the maximum distance where :math:`\theta` was :math:`<90°` with a statistical significance of 5 :math:`\sigma`: :math:`C_{vv}\left( t \right) = \mathop{\max }\limits_{r \to \infty }\left( r \right)\left\{ {\mathrm{AVG}\left( \theta \right)\left( {\it r} \right) + 5 \ast \mathrm{SEM}(\theta ({\it r})) < 90^\circ } \right\}`
+
+
