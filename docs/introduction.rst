@@ -47,8 +47,15 @@ Cellocity architecture
 ----------------------
 The core element in Cellocity is the ``Channel`` object, which represents one Z-plane of one time lapse image channel. ``Channel`` objects also handle image pre-processing, such as temporal or spatial median filtering. ``Channel`` objects are given as input to ``Analyzer`` objects, which perform specific analyses on the data. ``Analyzer`` objects can then, in turn, be given to ``Analysis`` objects, which take care of performing further analyses, such as calculating the alignment index, instantaneous order parameter (:math:`{\psi}`), and correlation length.
 
-Examples of algorithms implemented
-----------------------------------
+.. figure:: _static/cellocity_architecture.png
+    :align: left
+    :alt: Overview of Cellocity architecture
+    
+    Figure showing the overall object architecture of Cellocity.
+
+
+Examples of algorithms and vector field quantifications implemented
+-------------------------------------------------------------------
 Instantaneous Order Parameter (:math:`{\psi}`)
    :math:`{\psi}` = 1 corresponds to a perfectly uniform velocity field, where all the cells move in the same direction and with the same speed, while :math:`{\psi}` :math:`{\approx}` 0 is expected for a randomly oriented velocity field. See :cite:`Malinverno2017` for details.
 
@@ -57,7 +64,7 @@ Alignment Index
   See :cite:`Malinverno2017` for further details.
 
 5-:math:`{\sigma}` correlation length
-  5-:math:`{\sigma}` correlation length is a way to measure the correlation length in large vector fields. It finds the average distance at which the direction of velocities are no longer significantly different at a level of 5 standard deviations (:math:`{\sigma}`). The algorithm was originally presented and utilized in :cite:`Laang2018`. 
+  5-:math:`{\sigma}` correlation length is a way to measure the correlation length in large vector fields. It finds the average distance at which the direction of velocities are no longer significantly different at a level of 5 standard deviations (:math:`{\sigma}`). The algorithm was originally presented and utilized in :cite:`Laang2018`. A more detailed description can be found in the :doc:`developer`.
 
 
 
