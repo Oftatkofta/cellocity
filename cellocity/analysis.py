@@ -1105,3 +1105,21 @@ class IopAnalysis(FlowAnalysis):
         saveme = outdir / fname
 
         df.to_csv(saveme)
+
+
+class FiveSigmaAnalysis(FlowAnalysis):
+    """
+    Calculates the 5-sigma corrleation length for each frame of flow (see Malinverno et. al 2017 for a more
+    detailed explanation).
+
+    The iop is a measure of how similar the vectors in a field are, which takes in to account both the
+    direction and magnitudes of the vectors. iop is always between 0 and 1, with iop = 1 being a perfectly uniform field
+    of identical vectors, and iop = 0 for a perfectly random field.
+    """
+    def __init__(self, flowanalyzer):
+        """
+        :param flowanalyzer: a FlowAnalyzer object
+        :type flowanalyzer: analysis.FlowAnalyzer
+        """
+        super().__init__(flowanalyzer)
+        self.iops = None
