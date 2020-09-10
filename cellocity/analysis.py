@@ -130,6 +130,16 @@ class FlowAnalyzer(Analyzer):
         """
     
         return self.flows[frame, :, :, 1]
+
+    def get_flow_shape(self):
+        """
+        Returns the shape of self.flows
+
+        :return: the shape of self.flows
+        :rtype: tuple
+        """
+
+        return self.flows.shape
     
     def _getFlows(self):
         if self.flows is None:
@@ -294,7 +304,7 @@ class OpenPivAnalyzer(FlowAnalyzer):
 
 class Analysis(object):
     """
-    Base object for analysis of Analysis classes
+    Base object for handling data output and analysis and  of Analyzer classes.
 
     """
     
@@ -308,12 +318,21 @@ class Analysis(object):
     
     def getChannelName(self):
         """
-        Returns the name of the channel that the Analyzer is based on.
+        Returns the name of the channel that the base Analyzer, in turn, is based on.
     
         :return: self.name of the Channel that the base Analyzer is based on.
         :rtype: str
         """
         return self.analyzer.channel.name
+
+    def getAnalyzer(self):
+        """
+        Returns the Analyzer that the Analysis is based on.
+
+        :return: the Analyzer that the Analyser is based on.
+        :rtype: Analyzer
+        """
+        return self.analyzer
 
 class FlowAnalysis(Analysis):
     """
@@ -1109,17 +1128,287 @@ class IopAnalysis(FlowAnalysis):
 
 class FiveSigmaAnalysis(FlowAnalysis):
     """
-    Calculates the 5-sigma corrleation length for each frame of flow (see Malinverno et. al 2017 for a more
-    detailed explanation).
+    Calculates the 5-sigma corrleation length for each frame of flow (see Lång et. al 2018 or the documentation for a
+    more detailed explanation).
 
-    The iop is a measure of how similar the vectors in a field are, which takes in to account both the
-    direction and magnitudes of the vectors. iop is always between 0 and 1, with iop = 1 being a perfectly uniform field
-    of identical vectors, and iop = 0 for a perfectly random field.
+    The 5-:math:`{\sigma}` correlation length was defined as the largest distance, :math:`r`, where the average angle
+    between two velocity vectors :math:`r` micrometers apart was :math:`<90°` with a statistical significance level of
+    5 :math:`\sigma` :math:`(p=3×10^{−7})`.
+
     """
+
     def __init__(self, flowanalyzer):
         """
         :param flowanalyzer: a FlowAnalyzer object
         :type flowanalyzer: analysis.FlowAnalyzer
         """
         super().__init__(flowanalyzer)
-        self.iops = None
+        self.diagonalCoordinates = self._calculate_diagonal_coordinates()
+        self.distanceAngleDict = self._create_distanceAngleDict()
+        self.lcorrs = []
+
+    def _calculate_diagonal_coordinates(self):
+        """
+        creates a list of coodinates that run down the shortest diagonal of the flow array
+
+        :return:
+        """
+
+        out = []
+        flow_shape = self.getAnalyzer().get_flow_shape()
+        nrows = flow_shape[1]
+        ncols = flow_shape[2]
+
+        for diagonal in range(0, min(nrows, ncols)):  # follow the shortest diagonal
+            out.append((diagonal, diagonal))
+
+        return out
+
+    def _create_distanceAngleDict(self):
+
+        flow_shape = self.getAnalyzer().get_flow_shape()
+        nframes = flow_shape[0]
+        distanceAngleDict = {}
+
+
+        for f in range(nframes):
+            distanceAngleDict[f] = {}
+
+        return  distanceAngleDict
+
+    def _get_v0_plus_r_coordinates_cardinal(self, v0_cord, r):
+        """
+        Gets the 4 coordinates of the pixels that are r pixels away from the coordinate (v0_x, v0_y) along the four
+        cardinal directions. Coordinates are returned in the order: up/top, right, down/bottom, left.
+
+        The coordinates are returned in Matrix/numpy form (row,col), i.e. (y,x) when compared to traditional image
+        coordinate numbering. The input coordinate for v0 is also expected to be in this format (y_coord, x_coord).
+
+        If a coordinate falls outside of the image it is not returned.
+
+        :param v0_cord: (tuple) of (ints), (row, col) coordinates of v0 in matrix notation.
+        :type v0_cord: tuple
+        :param r: distance in pixels from v0 along the cardinal directions
+        :type r: int
+        :return: list coordinates in martix notation, if no valid coordinates are found an empty list is returned.
+        :rtype: list
+
+        """
+        flow_shape = self.getAnalyzer().get_flow_shape()
+
+        array_width = flow_shape[2]  # number of columns
+        array_height = flow_shape[1]  # number of rows
+        v0_r = v0_cord[0]  # row numer of v0
+        v0_c = v0_cord[1]  # column number of v0
+
+        assert r > 0, "r needs to be positive and >0 !"
+        assert array_width > v0_c, "v0_y needs to be less than array_width!"
+        assert v0_c >= 0, "v0_y needs to be positive!"
+        assert array_height > v0_r, "v0_y needs to be < array_height!"
+        assert v0_r >= 0, "v0_y needs to be positive and < array_height!"
+
+        top_r = v0_r - r #top row
+        right_c = v0_c + r #right column
+        bottom_r = v0_r + r
+        left_c = v0_c - r
+
+        out = []
+
+        if (top_r >= 0):
+            out.append((top_r, v0_c))
+
+        if (right_c < array_width):
+            out.append((v0_r, right_c))
+
+        if (bottom_r < array_height):
+            out.append((bottom_r, v0_c))
+
+        if (left_c >= 0):
+            out.append((v0_r, left_c))
+
+        return out
+
+
+    def _get_all_angles(self, frame, v0_coord, r_max, r_step=1, r_min=1):
+        """
+        Gets the vector, v0 from the given frame and the coordinate (v0_coord) from a velocity vector field. Grows the distance r from r_min to r_max
+        in increments of r_step. For each distance r calculates the average of the (cos) angles between v0 and v0+r in the
+        four cardinal directions. The result is stored in a dictionary where the keys are distances and the values are lists
+        of average angles for that distance. The updated resultsDict is returned.
+
+        :param frame: frame to get v0 from
+        :param v0_coord: (tuple) Coordinates (row, column) of vector_0
+        :param r_max: (int) maximum distance in pixels from v0 to calculate the angels for
+        :param r_step: (int) step size to grow the distance r by
+        :param r_min: (int) starting distance from v0 to calculate the angels for
+        :return: (dict) input resultDict updated with key = radius, value = list of means for cos(theta) v_0-v_r {radius:[list of mean angles]}
+        """
+        u_array = self.getAnalyzer().get_u_array(frame)
+        v_array = self.getAnalyzer().get_v_array(frame)
+
+        v0_u = u_array[v0_coord]
+        v0_v = v_array[v0_coord]
+
+        magnitudes = np.sqrt(np.square(u_array) + np.square(v_array))
+        v0_magnitude = magnitudes[v0_coord]
+
+        dot_products = u_array * v0_u + v_array * v0_v  # Computes ALL the dot products with v0
+        magnitudes = magnitudes * v0_magnitude  # Multiplies all magnitudes by the magnitude of v0
+
+        distanceAngleDict = {} #stores output and valid angels
+
+        for r in range(r_min, r_max, r_step):
+            if not r in self.distanceAngleDict[frame]:
+                self.distanceAngleDict[frame][r] = []
+
+            coords = self._get_v0_plus_r_coordinates_cardinal(v0_coord, r)
+
+            if len(coords) == 0:
+                break  # stop when we run out of valid coordinates
+            for c in coords:
+                if (magnitudes[c] == 0) or (magnitudes[c] is None):  # avoid masked or erroneous values
+                    pass
+                else:
+                    c_vv = dot_products[c] / magnitudes[c]
+                    self.distanceAngleDict[frame][r].append(c_vv)
+
+        for key in self.distanceAngleDict[frame].keys():
+            if len(self.distanceAngleDict[frame][key]) == 0:
+                self.distanceAngleDict[frame].pop(key, None)  # No need to save empty data lists, it breaks the statistics
+
+        return self.distanceAngleDict[frame]
+
+
+
+    """
+    :param indir:
+        Input directory
+    :param fname:
+        Name of input file
+    :param outdir:
+        Where to save graphs and output data
+    :param stopFrame:
+        (int) Last frame to analyze output
+    :param px_resolution:
+        (float/int) Pixel resolution of input images in um/pixel
+    :param time_resolution:
+        (float) Time resolution of input images in frames/hour
+    :param r_max:
+        (int) maximum distance (in pixels) to calculate angles for
+    :param r_step:
+        (int) increment size of distance r (in pixels) during angle calculations
+    :param n_sigma:
+        (float) significance level that determines the correlation length
+    :param intervalWidth:
+        (int) width in frames to integrate angle data for, i.e. temporal integration
+    :return:
+        (dict) output data for further processing
+
+    """
+
+    def _analyse_one_frame(self, frame):
+
+        for coorinate in self.diagonalCoordinates:  # follow the diagonal
+            results = self._get_all_angles(frame,coorinate,1608)
+
+metaResults[interval] = dict(results)
+
+    metaResults = {}
+
+    # temporal integration
+    for interval in range(0, arr_u.shape[0], intervalWidth):
+
+        results = {}
+        tmp_u = arr_u[interval:interval + intervalWidth]
+        tmp_v = arr_v[interval:interval + intervalWidth]
+
+        for t in range(tmp_u.shape[0]):
+
+            for diagonal in range(0, min(tmp_u.shape[1], tmp_u.shape[2])):  # follow the diagonal
+                results = get_all_angles(tmp_u[t], tmp_v[t], (diagonal, diagonal), results,
+                                         r_max=r_max, r_step=r_step, r_min=1)
+
+        metaResults[interval] = dict(results)
+
+    lastrs = [["n_sigma", "radius_px", "max_sign_r_um"]]
+
+    lcorrs = {}  # interval:correlation length in um
+
+    for interv in sorted(metaResults.keys()):
+        r = []
+        avg_angle = []
+        results = metaResults[interv]
+
+        for radius, angles_list in results.items():
+
+            if (len(angles_list) == 0):
+                print("Empty value at interval %i and r=%i" % (interv, radius))
+                break
+
+            sanitized_angles = [a for a in angles_list if a <= 1.0]  # Sometimes openPIV output wierd values
+            if len(sanitized_angles) != len(angles_list):
+                print("Bad angles at interval %i and radius %i, number ok: %i, not ok: %i" %
+                      (interv, radius, len(sanitized_angles), len(angles_list) - len(sanitized_angles)))
+            mean_angle = np.nanmean(sanitized_angles)
+            mean_angle_degrees = math.acos(mean_angle) * (180 / math.pi)
+            sd_angles = np.nanstd(sanitized_angles)
+            sd_angles_degrees = math.acos(sd_angles) * (180 / math.pi)
+            SEM_angles = sd_angles_degrees / math.sqrt(len(sanitized_angles))
+
+            r.append(radius * px_scale)
+            avg_angle.append(mean_angle_degrees)
+
+            if (mean_angle_degrees + n_sigma * SEM_angles >= 90) and (interv not in lcorrs) and (len(r) != 0):
+                # TODO interval_center = interval + intervalWidth/2 * time_resolution
+                lcorrs[interv] = r[-1]
+                print("%i-sigma reached at r=%i on interval %i, last significant distance was %.2f um" % (
+                n_sigma, radius, interv, r[-1]))
+
+        label = "interval: " + str(((interv) / time_resolution)) + " - " + \
+                str((interv + intervalWidth) / time_resolution) + " h, Lcorr = " + \
+                str(int(lcorrs[interv])) + " um"
+
+        plt.plot(r, avg_angle, label=label)
+
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, mode="expand")
+    plt.title("Average angle between velocity vectors \n" + fname[:-4])
+    plt.xlabel("Distance in um")
+    plt.ylabel("Mean angle (degrees)")
+    plt.ylim(0, 100)
+
+    if saveFigFlag:
+        savename = outdir + fname[:-4] + "_cvv." + figformat
+        plt.savefig(savename, bbox_inches='tight')
+
+    else:
+        plt.show()
+    print("All done in %.2f s" % (time.time() - t0))
+    plt.close()
+
+    correlation_lengths = []
+    time_interval_endpoints = []
+
+    for interv in sorted(metaResults.keys()):
+        correlation_lengths.append(lcorrs[interv])
+        time_interval_endpoints.append(int(interv) / float(time_resolution))
+
+    print(correlation_lengths)
+    print(time_interval_endpoints)
+
+    plt.plot(time_interval_endpoints, correlation_lengths, label=fname[:6])
+    plt.xlabel("Time (" + timeunit + ")")
+    plt.ylabel("l-corr")
+    plt.title("5-sigma correlation lengths \n" + fname[:-4])
+    plt.legend()
+    plt.ylim(0, 310)
+
+    if saveFigFlag:
+        savename = outdir + fname[:-4] + "_lcorrs." + figformat
+        plt.savefig(savename, bbox_inches='tight')
+
+    else:
+        plt.show()
+
+    plt.close()
+
+    return (inst_order_params, align_idxs, speeds, timepoints, lcorrs, metaResults)
