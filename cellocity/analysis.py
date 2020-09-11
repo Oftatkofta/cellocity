@@ -1,6 +1,6 @@
 import numpy as np
 import cv2 as cv
-import os, time
+import os, time, math
 import pandas as pd
 import tifffile
 import warnings
@@ -79,7 +79,6 @@ class FlowAnalyzer(Analyzer):
         self.unit = unit
         self.scaler = self._getScaler()  # value to multiply vector lengths by to get selected unit from px/frame
         self.flows = None  # (t, x, y, uv) numpy array
-        self.drawnFrames = None  # for output visualization
     
     def _getScaler(self):
         """
@@ -162,7 +161,7 @@ class FarenbackAnalyzer(FlowAnalyzer):
     
     def doFarenbackFlow(self, pyr_scale=0.5, levels=3, winsize=15, iterations=3, poly_n=5, poly_sigma=1.2, flags=0):
         """
-        Calculates Farenback flow for a single channel time lapse
+        Calculates Farenback flow for a single channel time lapse with validated default parameters.
     
         returns numpy array of dtype int32 with flow in the unit px/frame
         Output values need to be multiplied by a scalar to be converted to speeds.
@@ -1288,7 +1287,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
         Populates self.distanceAngleCoordinates[frame]
         """
         for coorinate in self.diagonalCoordinates:  # follow the diagonal
-        results = self._get_all_angles(frame, coorinate)
+            self._get_all_angles(frame, coorinate)
 
         #cleanup results
         for r in self.distanceAngleDict[frame].keys():
@@ -1313,8 +1312,34 @@ class FiveSigmaAnalysis(FlowAnalysis):
         :param frame:
         :return:
         """
+        assert frame in self.distanceAngleDict.keys(), "angles not calculated for frame!"
+
         r = []
         avg_angle = []
+
+        for radius in self.distanceAngleDict[frame].keys():
+                cos_theta_list = self.distanceAngleDict[frame][radius]
+
+                # Sometimes openPIV outputs wierd values
+                sanitized_angles = [a for a in cos_theta_list if a <= 1.0]
+                if len(sanitized_angles) != len(cos_theta_list):
+                    print("Bad angles at frame {} and radius {}, number ok: {}, not ok: {}".format(
+                        frame, radius, len(sanitized_angles), len(cos_theta_list) - len(sanitized_angles)))
+
+                mean_angle = np.nanmean(sanitized_angles)
+                mean_angle_degrees = math.acos(mean_angle) * (180 / math.pi)
+                sd_angles = np.nanstd(sanitized_angles)
+                sd_angles_degrees = math.acos(sd_angles) * (180 / math.pi)
+                SEM_angles = sd_angles_degrees / math.sqrt(len(sanitized_angles))
+
+            r.append(radius * px_scale)
+            avg_angle.append(mean_angle_degrees)
+
+            if (mean_angle_degrees + n_sigma * SEM_angles >= 90) and (interv not in lcorrs) and (len(r) != 0):
+                # TODO interval_center = interval + intervalWidth/2 * time_resolution
+                lcorrs[interv] = r[-1]
+                print("%i-sigma reached at r=%i on interval %i, last significant distance was %.2f um" % (
+                n_sigma, radius, interv, r[-1]))
 
     lastrs = [["n_sigma", "radius_px", "max_sign_r_um"]]
 
