@@ -1154,7 +1154,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
         else:
             self.r = maxdist
 
-        self.lcorrs = []
+        self.lcorrs = {}  # frame:correlation length in um
 
     def _calculate_diagonal_coordinates(self):
         """
@@ -1276,28 +1276,49 @@ class FiveSigmaAnalysis(FlowAnalysis):
                 if (magnitudes[coordinate] == 0) or (magnitudes[coordinate] is None):  # avoid masked or erroneous values
                     pass
                 else:
-                    c_vv = dot_products[coordinate] / magnitudes[coordinate]
-                    self.distanceAngleDict[frame][r].append(c_vv)
+                    cos_theta = dot_products[coordinate] / magnitudes[coordinate]
+                    self.distanceAngleDict[frame][r].append(cos_theta)
 
+        return self.distanceAngleDict[frame]
+
+    def _calculate_angels_one_frame(self, frame):
+        """
+        Gets all valid angles for the diagonal for the given frame.
+
+        Populates self.distanceAngleCoordinates[frame]
+        """
+        for coorinate in self.diagonalCoordinates:  # follow the diagonal
+        results = self._get_all_angles(frame, coorinate)
+
+        #cleanup results
         for r in self.distanceAngleDict[frame].keys():
             if len(self.distanceAngleDict[frame][r]) == 0:
                 self.distanceAngleDict[frame].pop(r, None)  # No need to save empty data lists, it breaks the statistics
 
-        return self.distanceAngleDict[frame]
+
+    def _calculate_angles_all_frames(self):
+        """
+
+        :return:
+        """
+        nframes = self.flow_shape[0]
+
+        for frame in range(nframes):
+            self._calculate_angels_one_frame(frame)
 
 
+    def calculate_lcorr_one_frame(self, frame):
+        """
 
-    def _calculate_angels_one_frame(self, frame):
-    """
-
-    """
-    for coorinate in self.diagonalCoordinates:  # follow the diagonal
-        results = self._get_all_angles(frame, coorinate)
-
+        :param frame:
+        :return:
+        """
+        r = []
+        avg_angle = []
 
     lastrs = [["n_sigma", "radius_px", "max_sign_r_um"]]
 
-    lcorrs = {}  # interval:correlation length in um
+
 
     for interv in sorted(metaResults.keys()):
         r = []
