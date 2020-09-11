@@ -1137,27 +1137,35 @@ class FiveSigmaAnalysis(FlowAnalysis):
 
     """
 
-    def __init__(self, flowanalyzer):
+    def __init__(self, flowanalyzer, maxdist=None):
         """
         :param flowanalyzer: a FlowAnalyzer object
         :type flowanalyzer: analysis.FlowAnalyzer
+        :param maxdist: Maximum distance (in pixels) to test if None defaults to max(flow width, height)
+        :type maxdist: int
         """
         super().__init__(flowanalyzer)
-        self.diagonalCoordinates = self._calculate_diagonal_coordinates()
-        self.distanceAngleDict = self._create_distanceAngleDict()
+        self.diagonalCoordinates = self._calculate_diagonal_coordinates() #list of tuples
+        self.distanceAngleDict = {}
+        self.flow_shape = self.getAnalyzer().get_flow_shape()
+
+        if maxdist is None:
+            self.r = max(self.flow_shape[1], self.flow_shape[2])
+        else:
+            self.r = maxdist
+
         self.lcorrs = []
 
     def _calculate_diagonal_coordinates(self):
         """
-        creates a list of coodinates that run down the shortest diagonal of the flow array
+        creates a list of coordinates that run down the shortest diagonal of the flow array
 
-        :return:
+        :return: list of coordinate tuples
         """
 
         out = []
-        flow_shape = self.getAnalyzer().get_flow_shape()
-        nrows = flow_shape[1]
-        ncols = flow_shape[2]
+        nrows = self.flow_shape[1]
+        ncols = self.flow_shape[2]
 
         for diagonal in range(0, min(nrows, ncols)):  # follow the shortest diagonal
             out.append((diagonal, diagonal))
@@ -1166,10 +1174,8 @@ class FiveSigmaAnalysis(FlowAnalysis):
 
     def _create_distanceAngleDict(self):
 
-        flow_shape = self.getAnalyzer().get_flow_shape()
-        nframes = flow_shape[0]
+        nframes = self.flow_shape[0]
         distanceAngleDict = {}
-
 
         for f in range(nframes):
             distanceAngleDict[f] = {}
@@ -1194,11 +1200,10 @@ class FiveSigmaAnalysis(FlowAnalysis):
         :rtype: list
 
         """
-        flow_shape = self.getAnalyzer().get_flow_shape()
 
-        array_width = flow_shape[2]  # number of columns
-        array_height = flow_shape[1]  # number of rows
-        v0_r = v0_cord[0]  # row numer of v0
+        array_width = self.flow_shape[2]  # number of columns
+        array_height = self..flow_shape[1]  # number of rows
+        v0_r = v0_cord[0]  # row number of v0
         v0_c = v0_cord[1]  # column number of v0
 
         assert r > 0, "r needs to be positive and >0 !"
@@ -1229,7 +1234,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
         return out
 
 
-    def _get_all_angles(self, frame, v0_coord, r_max, r_step=1, r_min=1):
+    def _get_all_angles(self, frame, v0_coord, r_step=1, r_min=1):
         """
         Gets the vector, v0 from the given frame and the coordinate (v0_coord) from a velocity vector field. Grows the distance r from r_min to r_max
         in increments of r_step. For each distance r calculates the average of the (cos) angles between v0 and v0+r in the
@@ -1245,6 +1250,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
         """
         u_array = self.getAnalyzer().get_u_array(frame)
         v_array = self.getAnalyzer().get_v_array(frame)
+        r_max = self.r
 
         v0_u = u_array[v0_coord]
         v0_v = v_array[v0_coord]
@@ -1255,80 +1261,39 @@ class FiveSigmaAnalysis(FlowAnalysis):
         dot_products = u_array * v0_u + v_array * v0_v  # Computes ALL the dot products with v0
         magnitudes = magnitudes * v0_magnitude  # Multiplies all magnitudes by the magnitude of v0
 
-        distanceAngleDict = {} #stores output and valid angels
+        if frame not in self.distanceAngleDict.keys():
+            self.distanceAngleDict[frame]={}
 
         for r in range(r_min, r_max, r_step):
-            if not r in self.distanceAngleDict[frame]:
+            if r not in self.distanceAngleDict[frame].keys():
                 self.distanceAngleDict[frame][r] = []
 
             coords = self._get_v0_plus_r_coordinates_cardinal(v0_coord, r)
 
             if len(coords) == 0:
                 break  # stop when we run out of valid coordinates
-            for c in coords:
-                if (magnitudes[c] == 0) or (magnitudes[c] is None):  # avoid masked or erroneous values
+            for coordinate in coords:
+                if (magnitudes[coordinate] == 0) or (magnitudes[coordinate] is None):  # avoid masked or erroneous values
                     pass
                 else:
-                    c_vv = dot_products[c] / magnitudes[c]
+                    c_vv = dot_products[coordinate] / magnitudes[coordinate]
                     self.distanceAngleDict[frame][r].append(c_vv)
 
-        for key in self.distanceAngleDict[frame].keys():
-            if len(self.distanceAngleDict[frame][key]) == 0:
-                self.distanceAngleDict[frame].pop(key, None)  # No need to save empty data lists, it breaks the statistics
+        for r in self.distanceAngleDict[frame].keys():
+            if len(self.distanceAngleDict[frame][r]) == 0:
+                self.distanceAngleDict[frame].pop(r, None)  # No need to save empty data lists, it breaks the statistics
 
         return self.distanceAngleDict[frame]
 
 
 
-    """
-    :param indir:
-        Input directory
-    :param fname:
-        Name of input file
-    :param outdir:
-        Where to save graphs and output data
-    :param stopFrame:
-        (int) Last frame to analyze output
-    :param px_resolution:
-        (float/int) Pixel resolution of input images in um/pixel
-    :param time_resolution:
-        (float) Time resolution of input images in frames/hour
-    :param r_max:
-        (int) maximum distance (in pixels) to calculate angles for
-    :param r_step:
-        (int) increment size of distance r (in pixels) during angle calculations
-    :param n_sigma:
-        (float) significance level that determines the correlation length
-    :param intervalWidth:
-        (int) width in frames to integrate angle data for, i.e. temporal integration
-    :return:
-        (dict) output data for further processing
-
+    def _calculate_angels_one_frame(self, frame):
     """
 
-    def _analyse_one_frame(self, frame):
+    """
+    for coorinate in self.diagonalCoordinates:  # follow the diagonal
+        results = self._get_all_angles(frame, coorinate)
 
-        for coorinate in self.diagonalCoordinates:  # follow the diagonal
-            results = self._get_all_angles(frame,coorinate,1608)
-
-metaResults[interval] = dict(results)
-
-    metaResults = {}
-
-    # temporal integration
-    for interval in range(0, arr_u.shape[0], intervalWidth):
-
-        results = {}
-        tmp_u = arr_u[interval:interval + intervalWidth]
-        tmp_v = arr_v[interval:interval + intervalWidth]
-
-        for t in range(tmp_u.shape[0]):
-
-            for diagonal in range(0, min(tmp_u.shape[1], tmp_u.shape[2])):  # follow the diagonal
-                results = get_all_angles(tmp_u[t], tmp_v[t], (diagonal, diagonal), results,
-                                         r_max=r_max, r_step=r_step, r_min=1)
-
-        metaResults[interval] = dict(results)
 
     lastrs = [["n_sigma", "radius_px", "max_sign_r_um"]]
 
