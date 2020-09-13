@@ -1160,9 +1160,9 @@ class FiveSigmaAnalysis(FlowAnalysis):
         :type maxdist: int
         """
         super().__init__(flowanalyzer)
+        self.flow_shape = self.getAnalyzer().get_flow_shape()
         self.diagonalCoordinates = self._calculate_diagonal_coordinates() #list of tuples
         self.distanceAngleDict = {}
-        self.flow_shape = self.getAnalyzer().get_flow_shape()
 
         if maxdist is None:
             self.r = max(self.flow_shape[1], self.flow_shape[2])
@@ -1217,7 +1217,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
         """
 
         array_width = self.flow_shape[2]  # number of columns
-        array_height = self..flow_shape[1]  # number of rows
+        array_height = self.flow_shape[1]  # number of rows
         v0_r = v0_cord[0]  # row number of v0
         v0_c = v0_cord[1]  # column number of v0
 
@@ -1345,8 +1345,8 @@ class FiveSigmaAnalysis(FlowAnalysis):
             # Sometimes openPIV outputs strange values
             sanitized_cos_theta_list = [a for a in cos_theta_list if a <= 1.0]
             if len(sanitized_cos_theta_list) != len(cos_theta_list):
-            print("Bad angles at frame {} and radius {}, number ok: {}, not ok: {}".format(
-                frame, radius, len(sanitized_cos_theta_list), len(cos_theta_list) - len(sanitized_cos_theta_list)))
+                print("Bad angles at frame {} and radius {}, number ok: {}, not ok: {}".format(
+                    frame, radius, len(sanitized_cos_theta_list), len(cos_theta_list) - len(sanitized_cos_theta_list)))
 
             if len(sanitized_cos_theta_list) == 0:
                 print("No acceptable angles left, aborting!")
@@ -1398,3 +1398,4 @@ class FiveSigmaAnalysis(FlowAnalysis):
         """
 
         return self.lcorrs
+
