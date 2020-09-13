@@ -1344,9 +1344,9 @@ class FiveSigmaAnalysis(FlowAnalysis):
 
             # Sometimes openPIV outputs strange values
             sanitized_cos_theta_list = [a for a in cos_theta_list if a <= 1.0]
-            if len(sanitized_cos_theta_list) != len(cos_theta_list):
-                print("Bad angles at frame {} and radius {}, number ok: {}, not ok: {}".format(
-                    frame, radius, len(sanitized_cos_theta_list), len(cos_theta_list) - len(sanitized_cos_theta_list)))
+            #if len(sanitized_cos_theta_list) != len(cos_theta_list):
+            #    print("Bad angles at frame {} and radius {}, number ok: {}, not ok: {}".format(
+            #        frame, radius, len(sanitized_cos_theta_list), len(cos_theta_list) - len(sanitized_cos_theta_list)))
 
             if len(sanitized_cos_theta_list) == 0:
                 print("No acceptable angles left, aborting!")
@@ -1369,14 +1369,14 @@ class FiveSigmaAnalysis(FlowAnalysis):
                     self.lcorrs[frame] = 0
                 else:
                     self.lcorrs[frame] = r_dist_um[-1]
-                print("{}-sigma reached at r={} on frame {}, last significant distance was {.2f} um".format(
+                print("{}-sigma reached at r={} on frame {}, last significant distance was {} um".format(
                     n_sigma, radius, frame, r_dist_um[-1]))
                 break
 
         if significantfFlag and (len(r_dist_um) == len(self.distanceAngleDict[frame].keys())):
             #still significant after entire diagonal?
             self.lcorrs[frame] = r_dist_um[-1]
-            print("{}-sigma not reached at r={} on frame {}, maximum significant distance was {.2f} um".format(
+            print("{}-sigma not reached at r={} on frame {}, maximum significant distance was {} um".format(
                 n_sigma, radius, frame, r_dist_um[-1]))
 
     def calculateCorrelationAllFrames(self, n_sigma=5):
