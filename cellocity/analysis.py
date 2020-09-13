@@ -711,7 +711,7 @@ class FlowSpeedAnalysis(FlowAnalysis):
     
         return self.speeds
     
-    def plotHistogram(self, frame):
+    def _plotHistogram(self, frame):
         """
         Plots the histogram for the supplied frame.
     
@@ -1322,7 +1322,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
             self._calculate_angels_one_frame(frame)
 
 
-    def calculate_lcorr_one_frame(self, frame, n_sigma=5):
+    def calculateCorrelationOneFrame(self, frame, n_sigma=5):
         """
 
         :param frame: (flow) frame to calculate correlation length for
@@ -1336,6 +1336,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
 
         r_dist_um = []
         avg_angle = []
+        significantfFlag = False
         px_scale = self.analyzer.get_pixel_size()
 
         for radius in sorted(self.distanceAngleDict[frame].keys()):
@@ -1361,12 +1362,39 @@ class FiveSigmaAnalysis(FlowAnalysis):
             avg_angle.append(mean_angle_degrees)
 
             #is the mean angle significantly lower than 90?
-            significanfFlag = mean_angle_degrees + n_sigma * SEM_angles <= 90
+            significantfFlag = mean_angle_degrees + n_sigma * SEM_angles <= 90
 
-            if not significanfFlag:
+            if not significantfFlag:
                 if len(r_dist_um) == 1:
                     self.lcorrs[frame] = 0
                 else:
                     self.lcorrs[frame] = r_dist_um[-1]
                 print("{}-sigma reached at r={} on frame {}, last significant distance was {.2f} um".format(
                     n_sigma, radius, frame, r_dist_um[-1]))
+                break
+
+        if significantfFlag and (len(r_dist_um) == len(self.distanceAngleDict[frame].keys())):
+            #still significant after entire diagonal?
+            self.lcorrs[frame] = r_dist_um[-1]
+            print("{}-sigma not reached at r={} on frame {}, maximum significant distance was {.2f} um".format(
+                n_sigma, radius, frame, r_dist_um[-1]))
+
+    def calculateCorrelationAllFrames(self, n_sigma=5):
+        """
+        Calculates correlation length for all flow frames
+
+        :param n_sigma:
+        :return:
+        """
+        for frame in range(self.flow_shape[0]):
+            print("Calculating correlation for frame {}".format(frame))
+            self.calculateCorrelationOneFrame(frame, n_sigma)
+
+    def getCorrelations(self):
+        """
+        Returns correlation lengths as a dictionary frame:correlation_length_in_um
+
+        :return:
+        """
+
+        
