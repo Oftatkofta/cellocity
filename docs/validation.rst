@@ -123,6 +123,14 @@ Quantitative vector field comparison
 
 Quantifying how well the vector field is aligned allows us to confirm our intital observation that PIV analysis does produce more variability in the direction of the flow vectors. Optical Flow generates alignment indexes very close to the expected value of 1.0, even after temporal median filtering.    
 
+.. figure:: _static/iop_compare.png
+    :align: left
+    :alt: Figure comparing the average frame instantaneous order parameter from Optical Flow vs PIV
+    
+    Figure showing box plots of average instantaneous order parameters (iop) for each frame for each file in the test dataset. y-axis denotes the iop (dimensionless), as read out by the ``.getIops()`` method of ``IopAnalysis``.
+
+The instantaneous order parameter is a measure of how ordered a vector field is, 0 represents a completely random field and 1 represents a comletely homogenous field, where all vectors have the same direction and magnitude. The expected value for the test data set is 1. 
+
 .. figure:: _static/60X_diagonal_compare.gif
     :align: left
     :alt: Figure comparing vector visualization from Optical Flow vs PIV
