@@ -1397,4 +1397,4 @@ class FiveSigmaAnalysis(FlowAnalysis):
         :return:
         """
 
-        
+        return self.lcorrs
