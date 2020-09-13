@@ -1334,7 +1334,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
         if frame not in self.distanceAngleDict.keys():
             self._calculate_angels_one_frame(frame)
 
-        r = []
+        r_dist_um = []
         avg_angle = []
         px_scale = self.analyzer.get_pixel_size()
 
@@ -1342,109 +1342,31 @@ class FiveSigmaAnalysis(FlowAnalysis):
             cos_theta_list = self.distanceAngleDict[frame][radius]
 
             # Sometimes openPIV outputs strange values
-            sanitized_angles = [a for a in cos_theta_list if a <= 1.0]
-            if len(sanitized_angles) != len(cos_theta_list):
+            sanitized_cos_theta_list = [a for a in cos_theta_list if a <= 1.0]
+            if len(sanitized_cos_theta_list) != len(cos_theta_list):
             print("Bad angles at frame {} and radius {}, number ok: {}, not ok: {}".format(
-                frame, radius, len(sanitized_angles), len(cos_theta_list) - len(sanitized_angles)))
+                frame, radius, len(sanitized_cos_theta_list), len(cos_theta_list) - len(sanitized_cos_theta_list)))
 
-            if len(sanitized_angles) == 0:
+            if len(sanitized_cos_theta_list) == 0:
                 print("No acceptable angles left, aborting!")
                 pass
 
-            mean_angle = np.nanmean(sanitized_angles)
-            mean_angle_degrees = math.acos(mean_angle) * (180 / math.pi)
-            sd_angles = np.nanstd(sanitized_angles)
-            sd_angles_degrees = math.acos(sd_angles) * (180 / math.pi)
-            SEM_angles = sd_angles_degrees / math.sqrt(len(sanitized_angles))
+            mean_cos_theta = np.nanmean(sanitized_cos_theta_list)
+            mean_angle_degrees = math.acos(mean_cos_theta) * (180 / math.pi)
+            sd_cos_theta = np.nanstd(sanitized_cos_theta_list)
+            sd_angles_degrees = math.acos(sd_cos_theta) * (180 / math.pi)
+            SEM_angles = sd_angles_degrees / math.sqrt(len(sanitized_cos_theta_list))
 
-            r.append(radius * px_scale)
+            r_dist_um.append(radius * px_scale)
             avg_angle.append(mean_angle_degrees)
 
-            if (mean_angle_degrees + n_sigma * SEM_angles >= 90) and (f not in lcorrs) and (len(r) != 0):
-                # TODO interval_center = interval + intervalWidth/2 * time_resolution
-                lcorrs[interv] = r[-1]
-                print("%i-sigma reached at r=%i on interval %i, last significant distance was %.2f um" % (
-                n_sigma, radius, interv, r[-1]))
+            #is the mean angle significantly lower than 90?
+            significanfFlag = mean_angle_degrees + n_sigma * SEM_angles <= 90
 
-    lastrs = [["n_sigma", "radius_px", "max_sign_r_um"]]
-
-
-
-    for interv in sorted(metaResults.keys()):
-        r = []
-        avg_angle = []
-        results = metaResults[interv]
-
-        for radius, angles_list in results.items():
-
-            if (len(angles_list) == 0):
-                print("Empty value at interval %i and r=%i" % (interv, radius))
-                break
-
-            sanitized_angles = [a for a in angles_list if a <= 1.0]  # Sometimes openPIV output wierd values
-            if len(sanitized_angles) != len(angles_list):
-                print("Bad angles at interval %i and radius %i, number ok: %i, not ok: %i" %
-                      (interv, radius, len(sanitized_angles), len(angles_list) - len(sanitized_angles)))
-            mean_angle = np.nanmean(sanitized_angles)
-            mean_angle_degrees = math.acos(mean_angle) * (180 / math.pi)
-            sd_angles = np.nanstd(sanitized_angles)
-            sd_angles_degrees = math.acos(sd_angles) * (180 / math.pi)
-            SEM_angles = sd_angles_degrees / math.sqrt(len(sanitized_angles))
-
-            r.append(radius * px_scale)
-            avg_angle.append(mean_angle_degrees)
-
-            if (mean_angle_degrees + n_sigma * SEM_angles >= 90) and (interv not in lcorrs) and (len(r) != 0):
-                # TODO interval_center = interval + intervalWidth/2 * time_resolution
-                lcorrs[interv] = r[-1]
-                print("%i-sigma reached at r=%i on interval %i, last significant distance was %.2f um" % (
-                n_sigma, radius, interv, r[-1]))
-
-        label = "interval: " + str(((interv) / time_resolution)) + " - " + \
-                str((interv + intervalWidth) / time_resolution) + " h, Lcorr = " + \
-                str(int(lcorrs[interv])) + " um"
-
-        plt.plot(r, avg_angle, label=label)
-
-    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, mode="expand")
-    plt.title("Average angle between velocity vectors \n" + fname[:-4])
-    plt.xlabel("Distance in um")
-    plt.ylabel("Mean angle (degrees)")
-    plt.ylim(0, 100)
-
-    if saveFigFlag:
-        savename = outdir + fname[:-4] + "_cvv." + figformat
-        plt.savefig(savename, bbox_inches='tight')
-
-    else:
-        plt.show()
-    print("All done in %.2f s" % (time.time() - t0))
-    plt.close()
-
-    correlation_lengths = []
-    time_interval_endpoints = []
-
-    for interv in sorted(metaResults.keys()):
-        correlation_lengths.append(lcorrs[interv])
-        time_interval_endpoints.append(int(interv) / float(time_resolution))
-
-    print(correlation_lengths)
-    print(time_interval_endpoints)
-
-    plt.plot(time_interval_endpoints, correlation_lengths, label=fname[:6])
-    plt.xlabel("Time (" + timeunit + ")")
-    plt.ylabel("l-corr")
-    plt.title("5-sigma correlation lengths \n" + fname[:-4])
-    plt.legend()
-    plt.ylim(0, 310)
-
-    if saveFigFlag:
-        savename = outdir + fname[:-4] + "_lcorrs." + figformat
-        plt.savefig(savename, bbox_inches='tight')
-
-    else:
-        plt.show()
-
-    plt.close()
-
-    return (inst_order_params, align_idxs, speeds, timepoints, lcorrs, metaResults)
+            if not significanfFlag:
+                if len(r_dist_um) == 1:
+                    self.lcorrs[frame] = 0
+                else:
+                    self.lcorrs[frame] = r_dist_um[-1]
+                print("{}-sigma reached at r={} on frame {}, last significant distance was {.2f} um".format(
+                    n_sigma, radius, frame, r_dist_um[-1]))
