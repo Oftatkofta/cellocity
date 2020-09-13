@@ -78,6 +78,7 @@ class FlowAnalyzer(Analyzer):
         assert unit in self.allowed_units, "unit has to be one of "+ str(self.allowed_units)
         self.unit = unit
         self.scaler = self._getScaler()  # value to multiply vector lengths by to get selected unit from px/frame
+        self.pxSize_um = None #PIV analysis changes pixel size
         self.flows = None  # (t, x, y, uv) numpy array
     
     def _getScaler(self):
@@ -139,7 +140,19 @@ class FlowAnalyzer(Analyzer):
         """
 
         return self.flows.shape
-    
+
+    def get_pixel_size(self):
+        """
+        Returns the pixel size in um of the Analyzer.
+
+        Some type of Analyzers, such as the OpenPivAnalyzer change the pixel size of the array by downsampling.
+
+        :return: pixel size in um of the Analyzer
+        :rtype: float
+        """
+
+        return self.pxSize_um
+
     def _getFlows(self):
         if self.flows is None:
             warnings.warn("No flow has been calculated!")
@@ -158,6 +171,7 @@ class FarenbackAnalyzer(FlowAnalyzer):
     
         """
         super().__init__(channel, unit)
+        self.pxSize_um = self.channel.pxSize_um #optical flow does not change pixel size
     
     def doFarenbackFlow(self, pyr_scale=0.5, levels=3, winsize=15, iterations=3, poly_n=5, poly_sigma=1.2, flags=0):
         """
@@ -268,6 +282,8 @@ class OpenPivAnalyzer(FlowAnalyzer):
         # Zero-filled output arrays are created beforehand for maximal performance
         out_u = np.zeros((n_frames, x.shape[0], x.shape[1]))
         out_v = np.zeros_like(out_u)
+
+        self.pxSize_um = arr.shape[1]/x.shape[0] * self.channel.pxSize_um
     
         for i in range(n_frames):
     
@@ -1306,36 +1322,45 @@ class FiveSigmaAnalysis(FlowAnalysis):
             self._calculate_angels_one_frame(frame)
 
 
-    def calculate_lcorr_one_frame(self, frame):
+    def calculate_lcorr_one_frame(self, frame, n_sigma=5):
         """
 
-        :param frame:
+        :param frame: (flow) frame to calculate correlation length for
+        :param n_sigma: Number of standard deviations to consider significant
+
         :return:
         """
-        assert frame in self.distanceAngleDict.keys(), "angles not calculated for frame!"
+
+        if frame not in self.distanceAngleDict.keys():
+            self._calculate_angels_one_frame(frame)
 
         r = []
         avg_angle = []
+        px_scale = self.analyzer.get_pixel_size()
 
-        for radius in self.distanceAngleDict[frame].keys():
-                cos_theta_list = self.distanceAngleDict[frame][radius]
+        for radius in sorted(self.distanceAngleDict[frame].keys()):
+            cos_theta_list = self.distanceAngleDict[frame][radius]
 
-                # Sometimes openPIV outputs wierd values
-                sanitized_angles = [a for a in cos_theta_list if a <= 1.0]
-                if len(sanitized_angles) != len(cos_theta_list):
-                    print("Bad angles at frame {} and radius {}, number ok: {}, not ok: {}".format(
-                        frame, radius, len(sanitized_angles), len(cos_theta_list) - len(sanitized_angles)))
+            # Sometimes openPIV outputs strange values
+            sanitized_angles = [a for a in cos_theta_list if a <= 1.0]
+            if len(sanitized_angles) != len(cos_theta_list):
+            print("Bad angles at frame {} and radius {}, number ok: {}, not ok: {}".format(
+                frame, radius, len(sanitized_angles), len(cos_theta_list) - len(sanitized_angles)))
 
-                mean_angle = np.nanmean(sanitized_angles)
-                mean_angle_degrees = math.acos(mean_angle) * (180 / math.pi)
-                sd_angles = np.nanstd(sanitized_angles)
-                sd_angles_degrees = math.acos(sd_angles) * (180 / math.pi)
-                SEM_angles = sd_angles_degrees / math.sqrt(len(sanitized_angles))
+            if len(sanitized_angles) == 0:
+                print("No acceptable angles left, aborting!")
+                pass
+
+            mean_angle = np.nanmean(sanitized_angles)
+            mean_angle_degrees = math.acos(mean_angle) * (180 / math.pi)
+            sd_angles = np.nanstd(sanitized_angles)
+            sd_angles_degrees = math.acos(sd_angles) * (180 / math.pi)
+            SEM_angles = sd_angles_degrees / math.sqrt(len(sanitized_angles))
 
             r.append(radius * px_scale)
             avg_angle.append(mean_angle_degrees)
 
-            if (mean_angle_degrees + n_sigma * SEM_angles >= 90) and (interv not in lcorrs) and (len(r) != 0):
+            if (mean_angle_degrees + n_sigma * SEM_angles >= 90) and (f not in lcorrs) and (len(r) != 0):
                 # TODO interval_center = interval + intervalWidth/2 * time_resolution
                 lcorrs[interv] = r[-1]
                 print("%i-sigma reached at r=%i on interval %i, last significant distance was %.2f um" % (
