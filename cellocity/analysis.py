@@ -1390,7 +1390,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
             print("Calculating correlation for frame {}".format(frame))
             self.calculateCorrelationOneFrame(frame, n_sigma)
 
-    def getCorrelations(self):
+    def getCorrelationLengths(self):
         """
         Returns correlation lengths as a dictionary frame:correlation_length_in_um
 
@@ -1399,3 +1399,40 @@ class FiveSigmaAnalysis(FlowAnalysis):
 
         return self.lcorrs
 
+    def saveCSV(self, outdir, fname=None, tunit="s"):
+        """
+        Saves a csv of correlation lengths per frame in outdir.
+
+        :param outdir: Directory where output is stored
+        :type outdir: pathlib.Path
+        :param fname: filename, defaults to channel name + _Cvv.csv
+        :type fname: str
+        :param tunit: Time unit in output one of: "s", "min", "h", "days"
+        :type tunit: str
+        :return:
+        """
+        assert tunit in time_multipliers.keys(), "tunit has to be one of: " + str(time_multipliers.keys())
+
+        if fname is None:
+            fname = self.analyzer.channel.name + "_Cvv.csv"
+
+        df_0 = pd.DataFrame.from_dict(self.lcorrs, orient='index', columns=["Cvv_um"])
+        df_0.sort_index(inplace=True)
+
+        time_multipliers = {
+            "s": 1,
+            "min": 1 / 60,
+            "h": 1 / (60 * 60),
+            "days": 1 / (24 * 60 * 60)
+        }
+
+
+        fr_interval_multiplier = time_multipliers.get(tunit) * (self.analyzer.channel.finterval_ms / 1000)
+        df_0.index
+        timepoints_abs = np.arange(0, arr.shape[0], dtype='float32') * fr_interval_multiplier
+
+        df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_frame_flow_" + self.analyzer.unit])
+        df.index.name = "Time(" + tunit + ")"
+
+        saveme = outdir / fname
+        df.to_csv(saveme)
