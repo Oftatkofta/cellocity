@@ -1399,6 +1399,33 @@ class FiveSigmaAnalysis(FlowAnalysis):
 
         return self.lcorrs
 
+    def getCorrelationLengthsAsDf(self, tunit="s"):
+        """
+        Returns a Pandas DataFrame with index:time in "tunit" and Correlation length.
+
+        :param tunit: Time unit in output one of: "s", "min", "h", "days"
+        :return: pandas.Dataframe
+        """
+        time_multipliers = {
+            "s": 1,
+            "min": 1 / 60,
+            "h": 1 / (60 * 60),
+            "days": 1 / (24 * 60 * 60)}
+
+        assert tunit in time_multipliers.keys(), "tunit has to be one of: " + str(time_multipliers.keys())
+
+        df = pd.DataFrame.from_dict(self.lcorrs, orient='index', columns=["Cvv_um"])
+        df.sort_index(inplace=True)
+
+
+
+        fr_interval_multiplier = time_multipliers.get(tunit) * (self.analyzer.channel.finterval_ms / 1000)
+        timepoints_abs = df.index.to_numpy() * fr_interval_multiplier
+        df.index = timepoints_abs
+        df.index.name = "Time(" + tunit + ")"
+
+        return df
+
     def saveCSV(self, outdir, fname=None, tunit="s"):
         """
         Saves a csv of correlation lengths per frame in outdir.
@@ -1411,28 +1438,11 @@ class FiveSigmaAnalysis(FlowAnalysis):
         :type tunit: str
         :return:
         """
-        assert tunit in time_multipliers.keys(), "tunit has to be one of: " + str(time_multipliers.keys())
 
         if fname is None:
             fname = self.analyzer.channel.name + "_Cvv.csv"
 
-        df_0 = pd.DataFrame.from_dict(self.lcorrs, orient='index', columns=["Cvv_um"])
-        df_0.sort_index(inplace=True)
-
-        time_multipliers = {
-            "s": 1,
-            "min": 1 / 60,
-            "h": 1 / (60 * 60),
-            "days": 1 / (24 * 60 * 60)
-        }
-
-
-        fr_interval_multiplier = time_multipliers.get(tunit) * (self.analyzer.channel.finterval_ms / 1000)
-        df_0.index
-        timepoints_abs = np.arange(0, arr.shape[0], dtype='float32') * fr_interval_multiplier
-
-        df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_frame_flow_" + self.analyzer.unit])
-        df.index.name = "Time(" + tunit + ")"
-
         saveme = outdir / fname
+        df = self.getCorrelationLengthsAsDf(tunit)
+
         df.to_csv(saveme)
