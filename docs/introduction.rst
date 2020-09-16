@@ -74,7 +74,7 @@ Examples
 Simple file loading example::
 
     from cellocity.channel import Channel
-    from tiffile import Tiffile
+    from tifffile import Tiffile
     
     tif = Tifffile(myFile)
     channel_1 = Channel(0, tif, "channel name") #0-indexed channels, meaning ch1 in ImageJ
