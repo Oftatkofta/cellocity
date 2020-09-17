@@ -179,7 +179,7 @@ class Channel(object):
                 return px_size_um
     
             elif (re.search(gamma_regex, version) != None):
-                px_size_um = self.tif.micromanager_metadata['PixelSize_um']
+                px_size_um = self.tif.micromanager_metadata['PixelSizeUm']
     
                 return px_size_um
     
