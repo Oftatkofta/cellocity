@@ -1170,6 +1170,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
             self.r = maxdist
 
         self.lcorrs = {}  # frame:correlation length in um
+        self._process_times = {} # frame:time_to_process_lcorr in seconds
 
     def _calculate_diagonal_coordinates(self):
         """
@@ -1330,7 +1331,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
 
         :return:
         """
-
+        t0 = time.time()
         if frame not in self.distanceAngleDict.keys():
             self._calculate_angels_one_frame(frame)
 
@@ -1379,6 +1380,8 @@ class FiveSigmaAnalysis(FlowAnalysis):
             print("{}-sigma not reached at r={} on frame {}, maximum significant distance was {} um".format(
                 n_sigma, radius, frame, r_dist_um[-1]))
 
+        self._process_times[frame] = round(time.time()-t0, 2)
+
     def calculateCorrelationAllFrames(self, n_sigma=5):
         """
         Calculates correlation length for all flow frames
@@ -1416,9 +1419,6 @@ class FiveSigmaAnalysis(FlowAnalysis):
 
         df = pd.DataFrame.from_dict(self.lcorrs, orient='index', columns=["Cvv_um"])
         df.sort_index(inplace=True)
-
-
-
         fr_interval_multiplier = time_multipliers.get(tunit) * (self.analyzer.channel.finterval_ms / 1000)
         timepoints_abs = df.index.to_numpy() * fr_interval_multiplier
         df.index = timepoints_abs
