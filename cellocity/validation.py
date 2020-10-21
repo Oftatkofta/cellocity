@@ -136,14 +136,14 @@ def make_ai_plot(df):
 
 def make_iop_plot(df):
     """
-    Generates a plot comparing instantaneous order parameterss
+    Generates a plot comparing instantaneous order parameters
 
     """
     sns_plot = sns.catplot(x="analyzer", y="iop",
                            hue="displacement", col="filter",
                            data=df, kind="box",
                            height=8, aspect=.7)
-    plt.xlabel
+    #plt.xlabel
     return sns_plot
 
 
