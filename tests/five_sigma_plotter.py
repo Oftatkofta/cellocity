@@ -12,7 +12,7 @@ def make_lcorr_plot(df):
 
     """
     sns_plot = sns.catplot(x="magnification", y="fraction_of_max_lcorr",
-                           hue="analyzer", col = "analyzer",
+                           hue="filter", col = "analyzer",
                            data=df, kind="box",
                            height=8, aspect=.7, )
     sns_plot.set_axis_labels("Magnification", "Fraction of theoretical maximum correlation length")
