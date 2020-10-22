@@ -144,6 +144,23 @@ Optical Flow and PIV analysis of transmitted light microscopy time-lapse data is
 This is particularly relevant for studies of primary cells, due to the difficulty in reliably labelling these for cell tracking.
 To our knowledge, there has not been a systematic evaluation of different pre-processing modalities and optical flow analysis algorithms on actual real-world, non-simulated, microscopy data. We therefore anticipate that others will find this software package and the validation dataset described in this chapter useful.
 
+.. figure:: _static/5sigma_lcorr_compare.png
+    :align: left
+    :alt: Figure comparing calculated 5-sigma correlation lengths between Optical Flow and PIV data.
+    
+
+    Figure showing flow vector visualization of the diagonal translation at 60X magnification. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects, ``OpenPivAnalyzer`` (left) and ``FarenbackAnalyzer`` (right). Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
+
+
+.. figure:: _static/5sigma_process_time_compare.png
+    :align: left
+    :alt: Figure comparing average frame 5-sigma correlation length calculation time between Optical Flow and PIV data.
+    
+
+    Figure showing flow vector visualization of the diagonal translation at 60X magnification. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects, ``OpenPivAnalyzer`` (left) and ``FarenbackAnalyzer`` (right). Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
+
+
+
  
 
 References

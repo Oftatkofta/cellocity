@@ -11,10 +11,15 @@ def make_lcorr_plot(df):
     Generates a plot comparing correlation lengths
 
     """
-    sns_plot = sns.catplot(x="magnification", y="Cvv_um",
-                           hue="analyzer",
+    sns_plot = sns.catplot(x="magnification", y="fraction_of_max_lcorr",
+                           hue="analyzer", col = "analyzer",
                            data=df, kind="box",
-                           height=8, aspect=.7)
+                           height=8, aspect=.7, )
+    sns_plot.set_axis_labels("Magnification", "Fraction of theoretical maximum correlation length")
+
+    #sns_plot.set_titles("Test", "col", "ROW")
+
+    #sns_plot.set(ylim=(0.5, 1))
 
     return sns_plot
 
@@ -55,15 +60,21 @@ max_lcorrs = {
 
 alldata = alldata.assign(
     max_lcorr = lambda dataframe: dataframe['magnification'].map(lambda max: max_lcorrs.get(max)))
+alldata = alldata.assign(
+    fraction_of_max_lcorr = lambda df: df['Cvv_um']/df['max_lcorr']
+)
 
 saveme = inpath / "5sigma_.csv"
 alldata.to_csv(saveme)
 print(alldata)
 
-#timeplot = make_proces_time_plot(alldata)
-#savename = inpath / "5sigma_process_time_compare.png"
-#plt.savefig(savename)
-#plt.show()
+timeplot = make_proces_time_plot(alldata)
+savename = inpath / "5sigma_process_time_compare.png"
+plt.savefig(savename)
+plt.show()
 
 lcorr_plot = make_lcorr_plot(alldata)
+savename = inpath / "5sigma_lcorr_compare.png"
+plt.savefig(savename)
+
 plt.show()
