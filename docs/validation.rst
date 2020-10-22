@@ -135,22 +135,18 @@ The instantaneous order parameter is a measure of how ordered a vector field is,
     :align: left
     :alt: Figure comparing vector visualization from Optical Flow vs PIV
     
-
     Figure showing flow vector visualization of the diagonal translation at 60X magnification. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects, ``OpenPivAnalyzer`` (left) and ``FarenbackAnalyzer`` (right). Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
 
 
-
-Optical Flow and PIV analysis of transmitted light microscopy time-lapse data is commonly used in studies of confluent cell layer dynamics phenomena, for example collective cell migration and wound healing.
-This is particularly relevant for studies of primary cells, due to the difficulty in reliably labelling these for cell tracking.
-To our knowledge, there has not been a systematic evaluation of different pre-processing modalities and optical flow analysis algorithms on actual real-world, non-simulated, microscopy data. We therefore anticipate that others will find this software package and the validation dataset described in this chapter useful.
+Lastly, let's have a look at the 5-:math:`{\sigma}` correlation length analysis. 5-:math:`{\sigma}` correlation length is a way to measure the correlation length in large vector fields. It finds the average distance at which the direction of velocities are no longer significantly different at a level of 5 standard deviations (:math:`{\sigma}`). The algorithm was originally presented and utilized in [#Laang2018]_. A more detailed description can be found in the :doc:`developer`.
 
 .. figure:: _static/5sigma_lcorr_compare.png
     :align: left
-    :alt: Figure comparing calculated 5-sigma correlation lengths between Optical Flow and PIV data.
-    
+    :alt: Figure comparing how well the calculated 5-sigma correlation lengths agree with the theoretical between Optical Flow and PIV data.
 
-    Figure showing flow vector visualization of the diagonal translation at 60X magnification. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects, ``OpenPivAnalyzer`` (left) and ``FarenbackAnalyzer`` (right). Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
+    Figure showing box plots of how well the calculated 5-:math:`{\sigma}` correlation lengths agree with the theoretical maximum value. The value is expressed as a fraction of the calculated correlation length and the theoretical maximum value, which is given by the magnification. ``OpenPivAnalyzer`` data (right) and ``FarenbackAnalyzer`` data (left) with (orange) and without (blue) temporal median filtration of raw data.
 
+Once again we see the superiority of optical flow when compared to PIV. If the 
 
 .. figure:: _static/5sigma_process_time_compare.png
     :align: left
@@ -160,11 +156,15 @@ To our knowledge, there has not been a systematic evaluation of different pre-pr
     Figure showing flow vector visualization of the diagonal translation at 60X magnification. Images were generated using the ``.draw_all_flow_frames_superimposed()`` method common to all ``FlowAnalysis`` objects, ``OpenPivAnalyzer`` (left) and ``FarenbackAnalyzer`` (right). Horizontal scale bar denotes a flow of 1 :math:`{\mu m/s}` .
 
 
-
+Optical Flow and PIV analysis of transmitted light microscopy time-lapse data is commonly used in studies of confluent cell layer dynamics phenomena, for example collective cell migration and wound healing.
+This is particularly relevant for studies of primary cells, due to the difficulty in reliably labelling these for cell tracking.
+To our knowledge, there has not been a systematic evaluation of different pre-processing modalities and optical flow analysis algorithms on actual real-world, non-simulated, microscopy data. We therefore anticipate that others will find this software package and the validation dataset described in this chapter useful.
  
 
 References
 ----------
 
 ..  [#vig] Dhruv K. Vig, Alex E. Hamby and Charles W. Wolgemuth. On the Quantification of Cellular Velocity Fields. *Biophysical Journal*, 110:1469-1475, 2016. `doi:10.1016/j.bpj.2016.02.032. <https://doi.org/10.1016/j.bpj.2016.02.032>`_
+
+.. [#Laang2018] Emma Lång, Anna Połeć, Anna Lång, Marijke Valk, Pernille Blicher, Alexander D. Rowe, Kim A. Tønseth, Catherine J. Jackson, Tor P. Utheim, Liesbeth M. C. Janssen, Jens Eriksson and Stig Ove Bøe. Coordinated collective migration and asymmetric cell division in confluent human keratinocytes without wounding. *Nature communications*, 1:2041-1723, 2018. `doi:10.1038/s41467-018-05578-7. <https://doi.org/10.1038/s41467-018-05578-7>`_  
 
