@@ -17,9 +17,6 @@ def make_lcorr_plot(df):
                            height=8, aspect=.7, )
     sns_plot.set_axis_labels("Magnification", "Fraction of theoretical maximum correlation length")
 
-    #sns_plot.set_titles("Test", "col", "ROW")
-
-    #sns_plot.set(ylim=(0.5, 1))
 
     return sns_plot
 
@@ -29,10 +26,10 @@ def make_proces_time_plot(df):
 
     """
     sns_plot = sns.catplot(x="analyzer", y="process_time",
-                    hue="filter",
-                    data=df, kind="violin",
+                    data=df, kind="box",
                     height=8, aspect=.7)
 
+    sns_plot.set_axis_labels("Analyzer", "Process time (s)")
 
     return sns_plot
 
