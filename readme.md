@@ -1,6 +1,6 @@
 # Cellocity
 
-Cellocity is a python package that allows the user to perform Optical Flow and PIV analysis on microscopy data. It is intended to be helpful in both the exploratory and in the data acquisition phases of a cell dynamics project. In the exploratory phase, several different algorithms, settings, and preprocessing steps can be evaluated. In the data acquisition phase a pre-determined pipeline can be "hard coded" into a GUI-based application that requires little expertise to utilize.
+Cellocity is a python package that allows the user to perform Optical Flow and PIV analysis on microscopy data. It is intended to be helpful in both the exploratory and in the data acquisition phases of a cell layer dynamics project. In the exploratory phase, several different algorithms, settings, and preprocessing functions can be evaluated. In the acquisition phase, a pipeline can be "hard coded" for processing of multiple data sets through a pre-determined series of steps.   
 
 ## Velocity and vector analysis of microscopy data
 
