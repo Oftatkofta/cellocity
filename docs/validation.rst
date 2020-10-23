@@ -66,7 +66,7 @@ All the validation figures can be re-generated on your local install by running 
 	inpath = Path("path/to/S-BSST641/")
 	outpath = Path("path/to/output/folder")
 	
-	validation.run_validation(inpath, outpath)
+	validation.run_base_validation(inpath, outpath)
 
 After some time you should have generated the 3 figures below in this chapter in your chosen output folder.
 
