@@ -8,7 +8,8 @@
 from pathlib import Path
 import tifffile
 from cellocity.channel import Channel, MedianChannel
-from cellocity.analysis import FarenbackAnalyzer, OpenPivAnalyzer, FlowSpeedAnalysis, AlignmentIndexAnalysis, IopAnalysis
+from cellocity.analysis import FarenbackAnalyzer, OpenPivAnalyzer, FlowSpeedAnalysis, AlignmentIndexAnalysis,\
+    IopAnalysis, FiveSigmaAnalysis
 from matplotlib import pyplot as plt
 import pandas as pd
 import seaborn as sns
