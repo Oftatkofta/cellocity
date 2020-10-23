@@ -37,7 +37,7 @@ When ImageJ (v. 1.52p) saves a Hyperstack as tif, it writes the 'Pixel Width' an
 
 
 Creating your own image format reader
---------------------------------------
+-------------------------------------
 
 If you want to develop your own reader for your microscope raw data, I suggest you look up the `Tiffile project <https://pypi.org/project/tifffile/>`_. It already implements reading of many common tif-formats from multiple microscope vendors. It is a trivial addition to tweak the Channel object and create your own subclass version specific to your file format, since Channel objects are basically extensions of Tifffile objects.
 
@@ -45,7 +45,7 @@ Pragmatically, the easiest way to get your non-supported image data set into Cel
 
 
 Detailed description of the 5-:math:`{\sigma}` correlation length analysis algorithm
------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
 
 The 5-:math:`{\sigma}` correlation length was defined as the largest distance, :math:`r`, where the average angle between two velocity vectors :math:`r` micrometers apart was :math:`<90°` with a statistical significance level of 5 :math:`\sigma` :math:`(p=3×10^{−7})`.
 
