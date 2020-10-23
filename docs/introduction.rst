@@ -35,7 +35,7 @@ Cellocity development history
 
 Cellocity has been developed over multiple years and several projects. The nucleus was developed in `Stig Ove Bøe's <https://ous-research.no/home/boe/Group+members/10831>`_ research group at Oslo University Hospital and at the `Nanoscopy Gaustad <https://www.med.uio.no/english/research/core-facilities/advanced-light-microscopy-gaustad/>`_ imaging core facility at the University of Oslo. Many of Cellocity's core algorithm implementations and methods, such as the 5-sigma correlation length analysis, were presented in a `Nature Communications <https://www.nature.com/articles/s41467-018-05578-7>`_ publication in 2018 :cite:`Laang2018`.
 
-The framework is currently being used and further developed as the analysis backbone for studies of microbial interactions with the gut epithelium at the `Sellin Laboratory <https://www.imbim.uu.se/research-groups/infection-and-defence/sellin-mikael/>`_ at Uppsala University. 
+The framework is currently being used and further developed as the analysis backbone for studies of microbial interactions with the gut epithelium in the `Sellin Laboratory <https://www.imbim.uu.se/research-groups/infection-and-immunity/sellin-mikael/>`_ at Uppsala University.
 
 
 Cellocity backbone
