@@ -8,7 +8,7 @@ import seaborn as sns
 
 def make_lcorr_plot(df):
     """
-    Generates a plot comparing correlation lengths
+    Generates a plot comparing correlation lengths between analyzers and magnifications
 
     """
     sns_plot = sns.catplot(x="magnification", y="fraction_of_max_lcorr",
@@ -32,11 +32,6 @@ def make_proces_time_plot(df):
     sns_plot.set_axis_labels("Analyzer", "Process time (s)")
 
     return sns_plot
-
-    fields = file_name.split("_")
-    magnification = fields[3]
-    displacemet = fields[4] + " " + fields[5]
-    df["magnification"] = magnification
 
 
 inpath = Path(r"C:\Users\Jens\Desktop\temp")
