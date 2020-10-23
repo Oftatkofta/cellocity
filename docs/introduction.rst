@@ -92,13 +92,16 @@ Simple optical flow calculation example::
     
     from cellocity.analysis import FarenbackAnalyzer
     
-    analysis_Ch1 = FarenbackAnalyzer(channel_1_median, "um/min")
-    analysis_Ch1.doFarenbackFlow()
+    flow_Ch1 = FarenbackAnalyzer(channel_1_median, "um/min")
+    flow_Ch1.doFarenbackFlow()
 
 Simple analysis data readout example::
 
-    analysis_Ch1.doFlowsToSpeed()
-    analysis_Ch1.saveSpeedCVS("/path/to/savefolder")
+    from cellocity.analysis import FlowSpeedAnalysis
+	
+	speed_analysis_Ch1 = FlowSpeedAnalysis(flow_Ch1)
+	speed_analysis_Ch1.calculateAverageSpeeds()
+	speed_analysis_Ch1.saveCVS("/path/to/savefolder")
 
 For more detailed examples please check out the tutorial section.
 
