@@ -2,6 +2,11 @@ import sys, getopt
 from cellocity import validation
 from pathlib import Path
 
+"""
+This script runs the main validation suite, where all Channels, Analyzers, and Analysis, except FiveSigmaAnalysis
+are tested. FiveSigmaAnalysis is validated separately in  run_5sigma_validation.py
+"""
+
 
 def main(argv):
     try:
@@ -18,7 +23,7 @@ def main(argv):
         elif opt in ("-o", "--outfolder"):
             outpath = Path(arg)
 
-    validation.run_validation(inpath, outpath)
+    validation.run_base_validation(inpath, outpath)
 
 
 if __name__ == "__main__":
