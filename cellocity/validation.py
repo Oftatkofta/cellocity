@@ -218,7 +218,7 @@ def get_data_as_df(analyzer, analyzername):
     return df
 
 
-def run_validation(inpath, outpath):
+def run_base_validation(inpath, outpath):
 
     finterval = 1
     kvargs = {'step': 60, 'scale': 10, 'line_thicknes': 2}
