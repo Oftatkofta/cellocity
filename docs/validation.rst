@@ -67,10 +67,35 @@ All the validation figures can be re-generated on your local install by running 
 	outpath = Path("path/to/output/folder")
 	
 	validation.run_base_validation(inpath, outpath)
+	
+Alternatively the validation code can be run as a script found in /tests:
 
-After some time you should have generated the 3 figures below in this chapter in your chosen output folder.
+.. code-block::
+
+	>>python run_base_validation.py -i "path/to/S-BSST641/" -o "path/to/output/folder"
+   
+
+After some time you should have generated the 3 figures below in this chapter in your chosen output folder. To test the 5-sgigma analysis run the following code:
+
+.. code-block:: python
+	
+	from cellocity import validation
+	from pathlib import Path
+	
+	inpath = Path("path/to/S-BSST641/")
+	outpath = Path("path/to/output/folder")
+	
+	validation.run_5sigma_validation(inpath, outpath)
 
 
+Alternatively the validation code can be run as a script found in /tests:
+
+.. code-block::
+
+	>>python run_5sigma_validation.py -i "path/to/S-BSST641/" -o "path/to/output/folder"
+   
+
+First we'll start by looking at the base validation.
 
 Process time
 ------------
