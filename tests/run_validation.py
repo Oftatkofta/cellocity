@@ -4,7 +4,7 @@ from pathlib import Path
 
 """
 This script runs the main validation suite, where all Channels, Analyzers, and Analysis, except FiveSigmaAnalysis
-are tested. FiveSigmaAnalysis is validated separately in  run_5sigma_validation.py
+are tested. FiveSigmaAnalysis is validated separately in run_5sigma_validation.py
 """
 
 
