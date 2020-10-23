@@ -160,9 +160,9 @@ def make_lcorr_plot(lcorrdf):
 
     return sns_plot
 
-def make_proces_time_plot(lcorrdf):
+def make_lcorr_proces_time_plot(lcorrdf):
     """
-    Generates a bar plot comparing processing times for the two analyzers.
+    Generates a bar plot comparing correlation length processing times for the two analyzers.
 
     """
     sns_plot = sns.catplot(x="analyzer", y="process_time",
@@ -298,7 +298,9 @@ def run_base_validation(inpath, outpath):
     finterval = 1
     kvargs = {'step': 60, 'scale': 10, 'line_thicknes': 2}
     saveme = outpath / "alldata.csv"
+    print("Creating Channel objects...")
     ch_list = make_channels(inpath)
+
     df = processAndMakeDf(ch_list)
     df.to_csv(saveme)
     df = pd.read_csv(saveme)
@@ -361,7 +363,7 @@ def run_5sigma_validation(inpath, outpath):
                                                                       ))
 
     alldata.to_csv(saveme)
-    timeplot = make_proces_time_plot(alldata)
+    timeplot = make_lcorr_proces_time_plot(alldata)
     savename = inpath / "5sigma_process_time_compare.png"
     plt.savefig(savename)
     plt.show()
