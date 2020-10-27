@@ -365,13 +365,13 @@ def run_5sigma_validation(inpath, outpath):
 
     alldata.to_csv(saveme)
     timeplot = make_lcorr_proces_time_plot(alldata)
-    savename = inpath / "5sigma_process_time_compare.png"
+    savename = outpath / "5sigma_process_time_compare.png"
     plt.savefig(savename)
-    plt.show()
+    #plt.show()
 
     lcorr_plot = make_lcorr_plot(alldata)
-    savename = inpath / "5sigma_lcorr_compare.png"
+    savename = outpath / "5sigma_lcorr_compare.png"
     plt.savefig(savename)
 
-    plt.show()
+    #plt.show()
 
