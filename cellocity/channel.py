@@ -650,7 +650,7 @@ def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
     :type lowPcClip: float
     :param highPcClip: Fraction for white/saturated clipping bound
     :type highPcClip: float
-    :return: 8-bit numpy array of the same shape as :param image_stack:
+    :return: 8-bit numpy array of the same shape as image_stack
     :rtype: numpy.dtype('uint8')
     
     """
@@ -670,8 +670,9 @@ def rehape3DArrayTo6D(array_3d):
     reshapes 3D (t, x, y) array to (t, 1, 1, x, y, 1).
 
     Used when saving ImageJ compatible tifs using ``Tifffile`` where dimensions have to be in TZCYXS order.
+
     :param array_3d: 3D numpy array
-    :return:
+    :return: None
     
     """
     assert len(array_3d.shape) == 3, "Must use 3D array!"
