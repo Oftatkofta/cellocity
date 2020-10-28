@@ -9,7 +9,7 @@ with open('readme.md') as f:
 
 setup(
     name='cellocity',
-    version='0.1.8',
+    version='1.0.0',
     description='Velocity and vector analysis of microscopy data',
     long_description=readme,
     long_description_content_type='text/markdown',
