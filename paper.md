@@ -45,6 +45,6 @@ The main advantages of Cellocity is its ability work on unlabeled Bright field t
 
 # Acknowledgements
 
-We thank Pilar Samperio Ventayol for preparing the fixed murine intestinal epithelial monolayer used to generate the validation dataset. This work was financed by the SciLifeLab Fellows program and the Swedish Foundation for Strategical Research (ICA16-0031). We also acknowledge support from the Knut and Alice Wallenberg Foundation (2016.0063) and the Malin and Lennart Philipson Foundation (L.P. Award 2018) that enabled development of the imaging technology used in this study. 
+We thank Pilar Samperio Ventayol for preparing the fixed murine intestinal epithelial monolayer used to generate the validation dataset. This work was financed by the SciLifeLab Fellows program and the Swedish Foundation for Strategic Research (ICA16-0031). We also acknowledge support from the Knut and Alice Wallenberg Foundation (2016.0063) and the Malin and Lennart Philipson Foundation (L.P. Award 2018) that enabled development of the imaging technology used in this study. 
 
 # References
