@@ -10,3 +10,6 @@ Cellocity can create vector field visualizations, speed graphs, and multiple adv
 
 Documentation is available at [Read the Docs](https://cellocity.readthedocs.io/en/latest/).
 There you can also find an extensive chapter on the validation of the Cellocity software.
+
+## Citing Cellocity
+If you want to cite Cellocity in your work you can use our JOSS publication [![DOI](https://joss.theoj.org/papers/10.21105/joss.02818/status.svg)](https://doi.org/10.21105/joss.02818)
