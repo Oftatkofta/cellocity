@@ -28,6 +28,10 @@ You can also clone the Github repository if you are interested in getting the cu
 
 Cellocity requires Python (>3.7), tifffile (2020.5.5), python-OpenCV (4.2.0.34), OpenPIV (0.21.3), Numpy (1.18.4), Pandas (1.0.3) to function correctly. Additionally, you need Matplotlib (3.2.1) and Seaborn (0.10.1) in order to visualize the validation output. If you perform a pip install from PyPi, all dependencies will be installed automatically.
 
+Citing Cellocity
+----------------
+
+If you have found Cellocity useful in your project and want to cite it, you can use our JOSS publication [![DOI](https://joss.theoj.org/papers/10.21105/joss.02818/status.svg)](https://doi.org/10.21105/joss.02818)
 
 
 Cellocity development history
