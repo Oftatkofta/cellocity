@@ -31,7 +31,7 @@ Cellocity requires Python (>3.7), tifffile (2020.5.5), python-OpenCV (4.2.0.34),
 Citing Cellocity
 ----------------
 
-If you have found Cellocity useful in your project and want to cite it, you can use our JOSS publication [![DOI](https://joss.theoj.org/papers/10.21105/joss.02818/status.svg)](https://doi.org/10.21105/joss.02818)]
+If you have found Cellocity useful in your project and want to cite it, you can use our JOSS publication [![DOI](https://joss.theoj.org/papers/10.21105/joss.02818/status.svg)](https://doi.org/10.21105/joss.02818)
 
 
 Cellocity development history
