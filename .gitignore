@@ -121,6 +121,7 @@ PIV_buddy/
 *.tif
 *.xml
 *.docx
+_cellocity_logo/
 
 MM_flow_tester.py
 docs/bibliography.bib.bak
