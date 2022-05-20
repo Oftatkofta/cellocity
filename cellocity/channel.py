@@ -75,7 +75,7 @@ class Channel(object):
     
     def _page_extractor(self):
         """
-        Decides which TiffPages from the Tiffile belon to the channel and stores them in self.pages
+        Decides which TiffPages from the Tiffile belong to the channel and stores them in self.pages
     
         Tifffile objects read the actual TIF image data together with the associated TIF-tags from disk and
         encapsulates them in TiffPage objects. The TiffPages that make up the channel data are read and stored in this
