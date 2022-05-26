@@ -3,6 +3,7 @@ import tifffile.tifffile as tifffile
 import re
 import statistics
 
+
 class Channel(object):
     """
     Base Class to keep track of one channel (t,x,y) of microscopy data.
@@ -38,11 +39,11 @@ class Channel(object):
         self.name = name
         self.tif_ij_metadata = tifffile.imagej_metadata
         self.pxSize_um = self._read_px_size()
-        self.finterval_ms = self._read_finteval() #frame interval from settings, maybe not actual
+        self.finterval_ms = self._read_finteval()  # frame interval from settings, maybe not actual
         self.pages = self._page_extractor()
-        self.elapsedTimes_ms = self._extractElapsedTimes() # only MM files have real values, IJ files trust finterval
-        self.array = np.empty((0)) # getArray populates this when called
-        self.actualFrameIntervals_ms = None #getActualFrameIntervals_ms populates this when called
+        self.elapsedTimes_ms = self._extractElapsedTimes()  # only MM files have real values, IJ files trust finterval
+        self.array = np.empty((0))  # getArray populates this when called
+        self.actualFrameIntervals_ms = None  # getActualFrameIntervals_ms populates this when called
     
     def _extractElapsedTimes(self):
         """
@@ -121,7 +122,7 @@ class Channel(object):
         """
         nChannels = self.tif.imagej_metadata.get('channels', 1)
         nSlices = self.tif.imagej_metadata.get('slices', 1)
-        #nFrames = self.tif.imagej_metadata.get('frames', None)
+        # nFrames = self.tif.imagej_metadata.get('frames', None)
     
         channelMap = []
         sliceMap = []
@@ -130,8 +131,7 @@ class Channel(object):
         for i in range(len(self.tif.pages)):
             chIdx = (i % nChannels)
             slIdx = (i // nChannels) % nSlices
-            frIdx = ( i // (nChannels*nSlices))
-
+            frIdx = (i // (nChannels*nSlices))
 
             channelMap.append(int(chIdx))
             sliceMap.append(int(slIdx))
@@ -168,24 +168,24 @@ class Channel(object):
     
             version = self.tif.micromanager_metadata["Summary"]["MicroManagerVersion"]
     
-            if (re.search(beta_regex, version) != None):
+            if (re.search(beta_regex, version) is not None):
                 px_size_um = self.tif.micromanager_metadata['PixelSize_um']
     
                 return px_size_um
     
-            elif (re.search(one4_regex, version) != None):
+            elif (re.search(one4_regex, version) is not None):
                 px_size_um = self.tif.micromanager_metadata['Summary']['PixelSize_um']
     
                 return px_size_um
     
-            elif (re.search(gamma_regex, version) != None):
+            elif (re.search(gamma_regex, version) is not None):
                 px_size_um = self.tif.micromanager_metadata['PixelSizeUm']
     
                 return px_size_um
     
         elif self.tif.is_imagej:
-            #this is not as clean due to the undocumented nature of imageJ metadata
-            #IJ uses TIF-tag to store pixel size information, but does not confer to standard unit of 'cm' or 'inch'
+            # this is not as clean due to the undocumented nature of imageJ metadata
+            # IJ uses TIF-tag to store pixel size information, but does not confer to standard unit of 'cm' or 'inch'
     
             divisor, dividend = self.tif.pages[0].tags['XResolution'].value
             if divisor == 0:
@@ -196,11 +196,11 @@ class Channel(object):
             millimeter_strings = ['mm', 'millimeter', 'millimeters']
             micrometer_strings = ['\\u00B5m', 'um', 'micrometer', 'micron']
     
-            #sz_unit defaults to µm if not set in IJ metadata
+            # sz_unit defaults to µm if not set in IJ metadata
             sz_unit = self.tif.imagej_metadata.get('unit', '\\u00B5m')
     
             if (sz_unit in centimeter_strings):
-                px_size_um = px_size * 10 * 1000 #10 mm/cm * 1000 um/mm = 10000 um
+                px_size_um = px_size * 10 * 1000  # 10 mm/cm * 1000 um/mm = 10000 um
     
             elif (sz_unit in millimeter_strings):
                 px_size_um = px_size * 1000  # 1000 um/mm
@@ -246,18 +246,17 @@ class Channel(object):
     
             version = self.tif.micromanager_metadata["Summary"]["MicroManagerVersion"]
 
-
-            if (re.search(beta_regex, version) != None):
+            if (re.search(beta_regex, version) is not None):
                 finterval_ms = self.tif.micromanager_metadata['Summary']['WaitInterval']
     
                 return finterval_ms
     
-            elif (re.search(one4_regex, version) != None):
+            elif (re.search(one4_regex, version) is not None):
                 finterval_ms = self.tif.micromanager_metadata['Summary']['Interval_ms']
     
                 return finterval_ms
     
-            elif (re.search(gamma_regex, version) != None):
+            elif (re.search(gamma_regex, version) is not None):
                 finterval_ms = self.tif.micromanager_metadata['Summary']['Interval_ms']
     
                 return finterval_ms
@@ -373,14 +372,14 @@ class Channel(object):
         return MedianChannel(self, **kwargs)
     
     def getTiffFile(self):
-        '''
+        """
     
         Returns the `Tifffile` objedt that the `Channel` is based on.
     
         :return: Tifffile-object used when Channel was created
         :rtype: object tifffile.Tifffile
     
-        '''
+        """
     
         return self.tif
     
@@ -467,7 +466,7 @@ class Channel(object):
         self.elapsedTimes_ms = self._extractElapsedTimes()
         self.name = self.name+"_TRIM-"+str(start)+"-"+str(stop)
     
-        #recalculate array
+        # recalculate array
         outshape = (len(self.pages), self.pages[0].shape[0], self.pages[0].shape[1])
         outType = self.pages[0].asarray().dtype
         out = np.empty(outshape, outType)
@@ -489,7 +488,7 @@ class MedianChannel(Channel):
     
     """
     
-    def __init__(self, channel, doGlidingProjection = True, frameSamplingInterval=3, startFrame=0, stopFrame=None):
+    def __init__(self, channel, doGlidingProjection=True, frameSamplingInterval=3, startFrame=0, stopFrame=None):
         """
         :param channel: Parent Channel object for the MedianChannel
         :type channel: Channel object
@@ -504,7 +503,7 @@ class MedianChannel(Channel):
         :type stopFrame: int or None
     
         """
-        #fields specific for MedianChannel
+        # fields specific for MedianChannel
         self.parent_channnel = channel
     
         assert type(doGlidingProjection) == bool, "doGlidingProjection must be a boolean"
@@ -513,18 +512,18 @@ class MedianChannel(Channel):
         self.frameSamplingInterval = frameSamplingInterval
         self.startFrame = startFrame
     
-        if stopFrame == None:
+        if stopFrame is None:
             self.stopFrame = len(channel.pages)
         else:
             self.stopFrame = stopFrame
     
         new_name = self.parent_channnel.name + "_MED-"+str(self.startFrame)+"-"+str(self.stopFrame)
         super().__init__(chIndex=self.parent_channnel.chIndex,
-                        tiffFile=self.parent_channnel.tif,
-                        name=new_name,
-                        sliceIndex=self.parent_channnel.sliceIdx)
+                         tiffFile=self.parent_channnel.tif,
+                         name=new_name,
+                         sliceIndex=self.parent_channnel.sliceIdx)
     
-        #fields common to all Channel-type objects, but that need recalculation
+        # fields common to all Channel-type objects, but that need recalculation
     
         self.array = self.getTemporalMedianFilter(doGlidingProjection=self.doGlidingProjection,
                                                   startFrame=self.startFrame,
@@ -534,7 +533,6 @@ class MedianChannel(Channel):
         self.finterval_ms = self._recalculate_finterval()
         self.elapsedTimes_ms = self._recalculate_elapsed_times()
         self.actualFrameIntervals_ms = self.getActualFrameIntevals_ms()
-
 
     def _recalculate_elapsed_times(self):
         """
@@ -568,7 +566,6 @@ class MedianChannel(Channel):
         else:
             return self.parent_channnel.finterval_ms * self.frameSamplingInterval
 
-
     def getTemporalMedianFilter(self, doGlidingProjection, startFrame, stopFrame,
                                 frameSamplingInterval):
         """
@@ -590,7 +587,7 @@ class MedianChannel(Channel):
     
         """
     
-        if (stopFrame == None) or (stopFrame > len(self.pages)):
+        if (stopFrame is None) or (stopFrame > len(self.pages)):
             raise ValueError("StopFrame cannot be None or larger than number of frames!")
     
         if (startFrame >= stopFrame):
@@ -631,12 +628,10 @@ class MedianChannel(Channel):
                 out[outframe] = frame_to_store
                 outframe += 1
 
-
-
         return out
 
 
-def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
+def normalization_to_8bit(image_stack, lowPcClip=0.175, highPcClip=0.175):
     """
     Function to rescale 16/32/64 bit arrays to 8-bit for visualizing output
 
@@ -655,8 +650,7 @@ def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
     
     """
 
-
-    #clip image to saturate 0.35% of pixels 0.175% in each end by default.
+    # clip image to saturate 0.35% of pixels 0.175% in each end by default.
     low = int(np.percentile(image_stack, lowPcClip))
     high = int(np.percentile(image_stack, 100 - highPcClip))
     
@@ -664,6 +658,7 @@ def normalization_to_8bit(image_stack, lowPcClip = 0.175, highPcClip = 0.175):
     image_equalized = np.interp(image_stack.flatten(), (low, high), (0, 255))
     
     return image_equalized.reshape(image_stack.shape).astype('uint8')
+
 
 def rehape3DArrayTo6D(array_3d):
     """
@@ -678,11 +673,12 @@ def rehape3DArrayTo6D(array_3d):
     assert len(array_3d.shape) == 3, "Must use 3D array!"
     array_3d.shape = (array_3d.shape[0], 1, 1, array_3d.shape[1], array_3d.shape[2], 1)
 
-def reshape6DArrayTo3D(array_6D):
+
+def reshape6DArrayTo3D(array_6d):
     """
     Undoes what reshape3DArrayTo6D does to the shape of the array.
 
-    :param array_6D: 6D numpy array
+    :param array_6d: 6D numpy array
     :return:
     
     """
