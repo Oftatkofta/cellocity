@@ -1,11 +1,13 @@
 import numpy as np
 import cv2 as cv
-import os, time, math
+import time
+import math
 import pandas as pd
 import tifffile
 import warnings
 import cellocity.channel as channel
 from matplotlib import pyplot as plt
+
 
 class Analyzer(object):
     """
@@ -22,7 +24,7 @@ class Analyzer(object):
     
         self.channel = channel
         self.progress = 0  # 0-100 for pyQt5 progressbar
-        self.process_time = 0 #time taken to process
+        self.process_time = 0  # time taken to process
     
     def getProgress(self):
         """
@@ -75,10 +77,10 @@ class FlowAnalyzer(Analyzer):
         super().__init__(channel)
     
         self.allowed_units = ["um/s", "um/min", "um/h"]
-        assert unit in self.allowed_units, "unit has to be one of "+ str(self.allowed_units)
+        assert unit in self.allowed_units, "unit has to be one of " + str(self.allowed_units)
         self.unit = unit
         self.scaler = self._getScaler()  # value to multiply vector lengths by to get selected unit from px/frame
-        self.pxSize_um = None #PIV analysis changes pixel size
+        self.pxSize_um = None  # PIV analysis changes pixel size
         self.flows = None  # (t, x, y, uv) numpy array
     
     def _getScaler(self):
@@ -171,7 +173,7 @@ class FarenbackAnalyzer(FlowAnalyzer):
     
         """
         super().__init__(channel, unit)
-        self.pxSize_um = self.channel.pxSize_um #optical flow does not change pixel size
+        self.pxSize_um = self.channel.pxSize_um  # optical flow does not change pixel size
     
     def doFarenbackFlow(self, pyr_scale=0.5, levels=3, winsize=15, iterations=3, poly_n=5, poly_sigma=1.2, flags=0):
         """
@@ -187,7 +189,7 @@ class FarenbackAnalyzer(FlowAnalyzer):
         # Create empty array for speed
         self.flows = np.empty((arr.shape[0] - 1, arr.shape[1], arr.shape[2], 2), dtype=np.float32)
     
-        #Setup progress reporting
+        # Setup progress reporting
         self.resetProgress()
     
         assert self.flows.shape[0] >= 1, "0 flow frames!"
@@ -208,12 +210,9 @@ class FarenbackAnalyzer(FlowAnalyzer):
             self.flows[i] = flow.astype(np.float32)
             self.updateProgress(progress_increment)
 
-
         self.process_time = time.time() - t0
     
         return self.flows
-
-
 
 
 class OpenPivAnalyzer(FlowAnalyzer):
@@ -231,12 +230,11 @@ class OpenPivAnalyzer(FlowAnalyzer):
     
         super().__init__(channel, unit)
         self.flow_coordinates = None
-        self.default_piv_params =  dict(window_size=64,
-                                        overlap=32,
-                                        dt=1,
-                                        search_area_size=70,
-                                        sig2noise_method="peak2peak")
-
+        self.default_piv_params = dict(window_size=64,
+                                       overlap=32,
+                                       dt=1,
+                                       search_area_size=70,
+                                       sig2noise_method="peak2peak")
 
     def doOpenPIV(self, **piv_params):
         """
@@ -261,11 +259,10 @@ class OpenPivAnalyzer(FlowAnalyzer):
     
             piv_params = self.default_piv_params
 
-
         arr = self.channel.getArray()
         n_frames = arr.shape[0] - 1
     
-        #Setup progress reporting
+        # Setup progress reporting
         self.resetProgress()
     
         assert n_frames >= 1, "0 flow frames!"
@@ -273,10 +270,10 @@ class OpenPivAnalyzer(FlowAnalyzer):
     
         # original x/y coordinates
         x, y = process.get_coordinates(image_size=arr[0].shape,
-                                            window_size=piv_params["window_size"],
-                                            overlap=piv_params["overlap"],
+                                       window_size=piv_params["window_size"],
+                                       overlap=piv_params["overlap"],
                                        )
-        #OpenCV places (0, 0) in upper left corner, so y-values needs to be flipped
+        # OpenCV places (0, 0) in upper left corner, so y-values needs to be flipped
         y = arr.shape[2] - y
     
         # Zero-filled output arrays are created beforehand for maximal performance
@@ -287,7 +284,7 @@ class OpenPivAnalyzer(FlowAnalyzer):
     
         for i in range(n_frames):
     
-            #openPIV works on 32bit images
+            # openPIV works on 32bit images
             frame_a = arr[i].astype(np.int32)
             frame_b = arr[i + 1].astype(np.int32)
     
@@ -296,13 +293,13 @@ class OpenPivAnalyzer(FlowAnalyzer):
                                                                   overlap=piv_params["overlap"],
                                                                   dt=piv_params["dt"],
                                                                   search_area_size=piv_params["search_area_size"],
-                                                                  sig2noise_method=piv_params["sig2noise_method"] )
-            #v-array needs to be flipped
+                                                                  sig2noise_method=piv_params["sig2noise_method"])
+            # v-array needs to be flipped
             out_v[i] = -out_v[i]
     
             self.updateProgress(progress_increment)
     
-        #all calculated arrays have the same shape
+        # all calculated arrays have the same shape
         shape = out_u.shape
     
         out_u = out_u.reshape((shape[0], shape[1], shape[2], 1))
@@ -348,6 +345,7 @@ class Analysis(object):
         :rtype: Analyzer
         """
         return self.analyzer
+
 
 class FlowAnalysis(Analysis):
     """
@@ -396,33 +394,31 @@ class FlowAnalysis(Analysis):
     def _draw_open_piv_frame(self, bg, flow, scale, line_thicknes):
         """
         Draws scaled optical from an OpenPIVAnalyser on background image. Visualizes the entire flow.
-    
-        :param img:
+
         :param flow:
         :param scale:
         :param line_thicknes:
         :return:
         """
-        #scale = kwargs.get("scale",1)
-        #line_thicknes = kwargs.get("line_thicknes", 2)
+        # scale = kwargs.get("scale",1)
+        # line_thicknes = kwargs.get("line_thicknes", 2)
     
         from_coord = self.analyzer.flow_coordinates
         to_coord = np.multiply(flow, scale)
-        #replace NaN with 0, because sometimes OpenPIV gives NaNs
-        to_coord = np.nan_to_num(to_coord, 0)
+        # replace NaN with 0, because sometimes OpenPIV gives NaNs
+        to_coord = np.nan_to_num(to_coord, False)
         to_coord = to_coord + from_coord
     
         vis = bg.copy()
-       # assert (to_coord.shape == from_coord.shape) and (len(to_coord) == 2), "Only single frames supported!"
+        # assert (to_coord.shape == from_coord.shape) and (len(to_coord) == 2), "Only single frames supported!"
     
         for row in range(from_coord.shape[0]):
             for col in range(from_coord.shape[1]):
                 fromX, fromY = from_coord[row][col]
                 toX, toY = to_coord[row][col]
-                cv.line(vis, (fromX, fromY), (toX, toY), (255,255,255), line_thicknes)
+                cv.line(vis, (fromX, fromY), (toX, toY), (255, 255, 255), line_thicknes)
     
         return vis
-
 
     def _draw_scalebar(self, img, pxlength):
         """
@@ -449,13 +445,14 @@ class FlowAnalysis(Analysis):
         Draws flow superimposed on the background channel as an 8-bit array.
     
         Draws a subset of the flow as lines on top of the background channel. Because the flow represents what happens
-        between frames, the flow is not drawn on the last frame of the channel, which is discarded. Creates and populates
+        between frames, the flow is not drawn on the last frame of the channel, which is discarded. Creates & populates
         self.drawnframes to store the drawn array. If the underlying channel object is 16-bit, it will converted to 8bit
         with the `channel.normailzation_to_8bit()` function.
     
         :param scalebarFlag: Should a scale bar be drawn on the output?
         :type scalebarFlag: bool
-        :param scalebarLength: What speed should the scale bar represent with its length the unit is set by the unit given to the Analyzer
+        :param scalebarLength: What speed should the scalebar represent with its length the unit is set by the unit
+        given to the Analyzer
         :param kwargs: Additional arguments passed to self._draw_flow_frame()
         :type kwargs: dict
     
@@ -486,13 +483,14 @@ class FlowAnalysis(Analysis):
         Draws flow on a black background as an 8-bit array.
     
         Draws a subset of the flow as lines on top of a black background. Because the flow represents what happens
-        between frames, the flow is not drawn on the last frame of the channel, which is discarded. Creates and populates
+        between frames, the flow is not drawn on the last frame of the channel, which is discarded. Creates & populates
         self.drawnframes to store the drawn array. If the underlying channel object is 16-bit, it will converted to 8bit
         with the `channel.normailzation_to_8bit()` function.
     
         :param scalebarFlag: Should a scale bar be drawn on the output?
         :type scalebarFlag: bool
-        :param scalebarLength: What speed should the scale bar represent with its length the unit is set by the unit given to the Analyzer
+        :param scalebarLength: What speed should the scale bar represent with its length the unit is set by the unit
+        given to the Analyzer
         :param kwargs: Additional arguments passed to self._draw_flow_frame()
         :type kwargs: dict
     
@@ -534,9 +532,9 @@ class FlowAnalysis(Analysis):
         :return: None
         """
         assert self.drawnFrames is not None, "No frames drawn!"
-        if type(self.analyzer)==FarenbackAnalyzer:
+        if type(self.analyzer) == FarenbackAnalyzer:
             suffix = "_flow.tif"
-        if type(self.analyzer)==OpenPivAnalyzer:
+        if type(self.analyzer) == OpenPivAnalyzer:
             suffix = "_PIV.tif"
     
         fname = self.getChannelName()+suffix
@@ -556,7 +554,7 @@ class FlowAnalysis(Analysis):
         tifffile.imwrite(savename, arr_to_save.astype(np.uint8),
                      imagej=True, resolution=(1 / self.analyzer.channel.pxSize_um, 1 / self.analyzer.channel.pxSize_um),
                      metadata=ij_metadatasave
-                     )
+                    )
     
         print("File done!")
     
@@ -616,14 +614,14 @@ class FlowSpeedAnalysis(FlowAnalysis):
         if self.speeds is None:
             self.calculateSpeeds()
     
-        #sometiimes OpenPIV genereates NaN values
+        # sometiimes OpenPIV genereates NaN values
         if np.isnan(self.speeds).any():
             self.avg_speeds = np.nanmean(self.speeds, axis=(1, 2))
     
         else:
-            self.avg_speeds = self.speeds.mean(axis=(1,2))
+            self.avg_speeds = self.speeds.mean(axis=(1, 2))
     
-        self.avg_speeds.shape = self.avg_speeds.shape[0] #make sure array is 1D
+        self.avg_speeds.shape = self.avg_speeds.shape[0]  # make sure array is 1D
     
         return self.avg_speeds
     
@@ -648,7 +646,7 @@ class FlowSpeedAnalysis(FlowAnalysis):
         if self.speeds is None:
             self.calculateSpeeds()
     
-        if hist_range == None:
+        if hist_range is None:
             hist_range = (0, self.speeds.max())
     
         print("Histogram range: {}".format(hist_range))
@@ -659,7 +657,7 @@ class FlowSpeedAnalysis(FlowAnalysis):
             hist = np.histogram(self.speeds[i], bins=nbins, range=hist_range, density=density)
             hists[i] = hist[0]
     
-        #bins are only stored once, because they are identical for all timepoints
+        # bins are only stored once, because they are identical for all timepoints
         bins = hist[1]
     
         self.histograms = (hists, bins)
@@ -747,14 +745,13 @@ class FlowSpeedAnalysis(FlowAnalysis):
         assert self.speeds is not None, "Speeds not calculated!"
     
         original_shape = self.speeds.shape
-        #imageJ hyperstacks need 6D arrays for saving
+        # imageJ hyperstacks need 6D arrays for saving
         channel.rehape3DArrayTo6D(self.speeds)
     
-        if fname == None:
-            #Replace slash character in unit with space_per_time
-            unit =self.analyzer.unit.replace("/", "-per-")
+        if fname is None:
+            # Replace slash character in unit with space_per_time
+            unit = self.analyzer.unit.replace("/", "-per-")
             fname = self.analyzer.channel.name + "_speeds-"+unit+".tif"
-
 
         saveme = outdir / fname
     
@@ -768,10 +765,10 @@ class FlowSpeedAnalysis(FlowAnalysis):
                          resolution=(1 / self.analyzer.channel.pxSize_um, 1 / self.analyzer.channel.pxSize_um),
                          metadata=ij_metadatasave)
     
-        #restore original array shape in case further analysis is performed
+        # restore original array shape in case further analysis is performed
         self.speeds.shape = original_shape
     
-    def saveCSV(self, outdir, fname=None, tunit ="s"):
+    def saveCSV(self, outdir, fname=None, tunit="s"):
         """
         Saves a csv of average speeds per frame in outdir.
     
@@ -808,6 +805,7 @@ class FlowSpeedAnalysis(FlowAnalysis):
         saveme = outdir / fname
         df.to_csv(saveme)
 
+
 class AlignmentIndexAnalysis(FlowAnalysis):
     """
     Calculates the alignment index for the flow vectors in a FlowAnalyzer object.
@@ -816,7 +814,8 @@ class AlignmentIndexAnalysis(FlowAnalysis):
     products of the mean velocity vector with each individual vector, all divided by the product of their
     magnitudes.
     
-    The alignment index is 1 when the local velocity is parallel to the mean direction of migration  (-1 if antiparallel).
+    The alignment index is 1 when the local velocity is parallel to the mean direction of migration
+    (-1 if antiparallel).
     
     """
     def __init__(self, analyzer):
@@ -880,12 +879,11 @@ class AlignmentIndexAnalysis(FlowAnalysis):
         assert self.alignment_idxs is not None, "Alignment indexes not calculated!"
     
         original_shape = self.alignment_idxs.shape
-        #imageJ hyperstacks need 6D arrays for saving
+        # imageJ hyperstacks need 6D arrays for saving
         channel.rehape3DArrayTo6D(self.alignment_idxs)
     
-        if fname == None:
+        if fname is None:
             fname = self.analyzer.channel.name + "_ai.tif"
-
 
         saveme = outdir / fname
     
@@ -899,7 +897,7 @@ class AlignmentIndexAnalysis(FlowAnalysis):
                          resolution=(1 / self.analyzer.channel.pxSize_um, 1 / self.analyzer.channel.pxSize_um),
                          metadata=ij_metadatasave)
     
-        #restore original array shape in case further analysis is performed
+        # restore original array shape in case further analysis is performed
         self.alignment_idxs.shape = original_shape
     
     def calculateAverage(self):
@@ -913,14 +911,14 @@ class AlignmentIndexAnalysis(FlowAnalysis):
         if self.alignment_idxs is None:
             self.calculateAlignIdxs()
     
-        #sometiimes OpenPIV genereates NaN values
+        # sometiimes OpenPIV genereates NaN values
         if np.isnan(self.alignment_idxs.any()):
             self.avg_alignment_idxs = np.nanmean(self.alignment_idxs, axis=(1, 2))
     
         else:
-            self.avg_alignment_idxs = self.alignment_idxs.mean(axis=(1,2))
+            self.avg_alignment_idxs = self.alignment_idxs.mean(axis=(1, 2))
     
-        self.avg_alignment_idxs.shape = self.avg_alignment_idxs.shape[0] #make sure array is 1D
+        self.avg_alignment_idxs.shape = self.avg_alignment_idxs.shape[0]  # make sure array is 1D
     
         return self.avg_alignment_idxs
     
@@ -989,6 +987,7 @@ class AlignmentIndexAnalysis(FlowAnalysis):
         saveme = outdir / fname
         df.to_csv(saveme)
 
+
 class IopAnalysis(FlowAnalysis):
     """
     Calculates the instantaneous order parameter (iop) for each frame of flow (see Malinverno et. al 2017 for a more
@@ -1022,7 +1021,6 @@ class IopAnalysis(FlowAnalysis):
 
         return msv
 
-    
     def _smvvm(self, u, v):  # Square Mean Vectorial Velocity Magnitude
         """
         Array addition of the squared average vector components, used in calculating the instantaneous order parameter
@@ -1040,10 +1038,10 @@ class IopAnalysis(FlowAnalysis):
     
     def _instantaneous_order_parameter(self, u, v):
         """
-        Calculates the instantaneous order parameter (iop) in one flow frame see  Malinverno et. al 2017 for a more detailed
-        explanation. The iop is a measure of how similar the vectors in a field are, which takes in to account both the
-        direcions and magnitudes of the vectors. iop always between 0 and 1, with iop = 1 being a perfectly uniform field
-        of identical vectors, and iop = 0 for a perfectly random field.
+        Calculates the instantaneous order parameter (iop) in one flow frame see  Malinverno et. al 2017 for a more
+        detailed explanation. The iop is a measure of how similar the vectors in a field are, which takes in to account
+        both the direcions and magnitudes of the vectors. iop always between 0 and 1, with iop = 1 being a perfectly
+        uniform field of identical vectors, and iop = 0 for a perfectly random field.
     
         :param u:
             2D numpy array with the u component of velocity vectors
@@ -1052,7 +1050,7 @@ class IopAnalysis(FlowAnalysis):
         :return:
             (float) iop of vector field
         """
-        return self._smvvm(u, v) / self._msv(u, v) #square_mean_vectorial_velocity_magnitude/Mean Square Velocity
+        return self._smvvm(u, v) / self._msv(u, v)  # square_mean_vectorial_velocity_magnitude/Mean Square Velocity
 
     def calculateIops(self):
         """
@@ -1161,7 +1159,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
         """
         super().__init__(flowanalyzer)
         self.flow_shape = self.getAnalyzer().get_flow_shape()
-        self.diagonalCoordinates = self._calculate_diagonal_coordinates() #list of tuples
+        self.diagonalCoordinates = self._calculate_diagonal_coordinates()  # list of tuples
         self.distanceAngleDict = {}
 
         if maxdist is None:
@@ -1170,7 +1168,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
             self.r = maxdist
 
         self.lcorrs = {}  # frame:correlation length in um
-        self._process_times = {} # frame:time_to_process_lcorr in seconds
+        self._process_times = {}  # frame:time_to_process_lcorr in seconds
 
     def _calculate_diagonal_coordinates(self):
         """
@@ -1196,7 +1194,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
         for f in range(nframes):
             distanceAngleDict[f] = {}
 
-        return  distanceAngleDict
+        return distanceAngleDict
 
     def _get_v0_plus_r_coordinates_cardinal(self, v0_cord, r):
         """
@@ -1228,8 +1226,8 @@ class FiveSigmaAnalysis(FlowAnalysis):
         assert array_height > v0_r, "v0_y needs to be < array_height!"
         assert v0_r >= 0, "v0_y needs to be positive and < array_height!"
 
-        top_r = v0_r - r #top row
-        right_c = v0_c + r #right column
+        top_r = v0_r - r  # top row
+        right_c = v0_c + r  # right column
         bottom_r = v0_r + r
         left_c = v0_c - r
 
@@ -1249,20 +1247,20 @@ class FiveSigmaAnalysis(FlowAnalysis):
 
         return out
 
-
     def _get_all_angles(self, frame, v0_coord, r_step=1, r_min=1):
         """
-        Gets the vector, v0 from the given frame and the coordinate (v0_coord) from a velocity vector field. Grows the distance r from r_min to r_max
-        in increments of r_step. For each distance r calculates the average of the (cos) angles between v0 and v0+r in the
-        four cardinal directions. The result is stored in a dictionary where the keys are distances and the values are lists
-        of average angles for that distance. The updated resultsDict is returned.
+        Gets the vector, v0 from the given frame and the coordinate (v0_coord) from a velocity vector field. Grows the
+        distance r from r_min to r_max in increments of r_step. For each distance r calculates the average of the (cos)
+        angles between v0 and v0+r in the four cardinal directions. The result is stored in a dictionary where the keys
+        are distances and the values are lists of average angles for that distance. The updated resultsDict is returned.
 
         :param frame: frame to get v0 from
         :param v0_coord: (tuple) Coordinates (row, column) of vector_0
         :param r_max: (int) maximum distance in pixels from v0 to calculate the angels for
         :param r_step: (int) step size to grow the distance r by
         :param r_min: (int) starting distance from v0 to calculate the angels for
-        :return: (dict) input resultDict updated with key = radius, value = list of means for cos(theta) v_0-v_r {radius:[list of mean angles]}
+        :return: (dict) input resultDict updated with key = radius, value = list of means for cos(theta) v_0-v_r
+        {radius:[list of mean angles]}
         """
         u_array = self.getAnalyzer().get_u_array(frame)
         v_array = self.getAnalyzer().get_v_array(frame)
@@ -1278,7 +1276,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
         magnitudes = magnitudes * v0_magnitude  # Multiplies all magnitudes by the magnitude of v0
 
         if frame not in self.distanceAngleDict.keys():
-            self.distanceAngleDict[frame]={}
+            self.distanceAngleDict[frame] = {}
 
         for r in range(r_min, r_max, r_step):
             if r not in self.distanceAngleDict[frame].keys():
@@ -1289,7 +1287,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
             if len(coords) == 0:
                 break  # stop when we run out of valid coordinates
             for coordinate in coords:
-                if (magnitudes[coordinate] == 0) or (magnitudes[coordinate] is None):  # avoid masked or erroneous values
+                if (magnitudes[coordinate] == 0) or (magnitudes[coordinate] is None):  # avoid masked or erroneous vals
                     pass
                 else:
                     cos_theta = dot_products[coordinate] / magnitudes[coordinate]
@@ -1306,11 +1304,10 @@ class FiveSigmaAnalysis(FlowAnalysis):
         for coorinate in self.diagonalCoordinates:  # follow the diagonal
             self._get_all_angles(frame, coorinate)
 
-        #cleanup results
+        # cleanup results
         for r in self.distanceAngleDict[frame].keys():
             if len(self.distanceAngleDict[frame][r]) == 0:
                 self.distanceAngleDict[frame].pop(r, None)  # No need to save empty data lists, it breaks the statistics
-
 
     def _calculate_angles_all_frames(self):
         """
@@ -1321,7 +1318,6 @@ class FiveSigmaAnalysis(FlowAnalysis):
 
         for frame in range(nframes):
             self._calculate_angels_one_frame(frame)
-
 
     def calculateCorrelationOneFrame(self, frame, n_sigma=5):
         """
@@ -1345,7 +1341,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
 
             # Sometimes openPIV outputs strange values
             sanitized_cos_theta_list = [a for a in cos_theta_list if a <= 1.0]
-            #if len(sanitized_cos_theta_list) != len(cos_theta_list):
+            # if len(sanitized_cos_theta_list) != len(cos_theta_list):
             #    print("Bad angles at frame {} and radius {}, number ok: {}, not ok: {}".format(
             #        frame, radius, len(sanitized_cos_theta_list), len(cos_theta_list) - len(sanitized_cos_theta_list)))
 
@@ -1362,7 +1358,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
             r_dist_um.append(radius * px_scale)
             avg_angle.append(mean_angle_degrees)
 
-            #is the mean angle significantly lower than 90?
+            # is the mean angle significantly lower than 90?
             significantfFlag = mean_angle_degrees + n_sigma * SEM_angles <= 90
 
             if not significantfFlag:
@@ -1375,7 +1371,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
                 break
 
         if significantfFlag and (len(r_dist_um) == len(self.distanceAngleDict[frame].keys())):
-            #still significant after entire diagonal?
+            # still significant after entire diagonal?
             self.lcorrs[frame] = r_dist_um[-1]
             print("{}-sigma not reached at r={} on frame {}, maximum significant distance was {} um".format(
                 n_sigma, radius, frame, r_dist_um[-1]))
