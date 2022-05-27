@@ -5,7 +5,6 @@
 # It's natively not a time lapse stack data set, so some custom manipulation of the Channel objects will have to be done
 # in order to make it appear as though the image stacks come from a time lapse set with a 1 Hz imaging frame rate.
 
-from pathlib import Path
 import tifffile
 from cellocity.channel import Channel, MedianChannel
 from cellocity.analysis import FarenbackAnalyzer, OpenPivAnalyzer, FlowSpeedAnalysis, AlignmentIndexAnalysis,\
@@ -13,7 +12,6 @@ from cellocity.analysis import FarenbackAnalyzer, OpenPivAnalyzer, FlowSpeedAnal
 from matplotlib import pyplot as plt
 import pandas as pd
 import seaborn as sns
-
 
 
 def convertChannel(fname, finterval=1):
@@ -34,6 +32,7 @@ def convertChannel(fname, finterval=1):
     
     return ch
 
+
 def convertMedianChannel(fname, finterval=1):
     """
     Converts a mulitiposition ome.tif MM file to a timelapse MedianChannel with finterval second frame interval.
@@ -53,6 +52,7 @@ def convertMedianChannel(fname, finterval=1):
     
     return ch
 
+
 def make_channels(inpath):
     """
     Creates a list of Channel objects from files in inPath.
@@ -62,7 +62,7 @@ def make_channels(inpath):
     :rtype: list
     """
     
-    out=[]
+    out = []
     
     for f in inpath.iterdir():
         if (f.suffix == ".tif") and f.is_file():
@@ -73,6 +73,7 @@ def make_channels(inpath):
     
     return out
 
+
 def processAndMakeDf(ch_list):
     """
     Creates analyzers from and runs test functions on a list of Channels.
@@ -80,8 +81,6 @@ def processAndMakeDf(ch_list):
 
     :param ch_list: List of Channel objects
     :type ch_list: list
-    :param outpath: Path where to save output
-    :type outpath: pathlib.Path
     :return: Pandas DataFrame with data from analysis
     :rtype: pandas.DataFrame
     """
@@ -94,8 +93,8 @@ def processAndMakeDf(ch_list):
         a2 = make_piv_analyzer(ch)
         alldata = alldata.append(get_data_as_df(a2, "PIV"))
 
-
     return alldata
+
 
 def make_proces_time_plot(df):
     """
@@ -103,12 +102,12 @@ def make_proces_time_plot(df):
 
     """
     sns_plot = sns.catplot(x="analyzer", y="process_time",
-                    hue="filter",
-                    data=df, kind="violin",
-                    height=8, aspect=.7)
-
+                           hue="filter",
+                           data=df, kind="violin",
+                           height=8, aspect=.7)
 
     return sns_plot
+
 
 def make_speed_plot(df):
     """
@@ -116,11 +115,12 @@ def make_speed_plot(df):
 
     """
     sns_plot = sns.catplot(x="analyzer", y="AVG_speed_um/s",
-                    hue="displacement", col="filter",
-                    data=df, kind="box",
-                    height=8, aspect=.7)
+                           hue="displacement", col="filter",
+                           data=df, kind="box",
+                           height=8, aspect=.7)
     
     return sns_plot
+
 
 def make_ai_plot(df):
     """
@@ -128,9 +128,9 @@ def make_ai_plot(df):
 
     """
     sns_plot = sns.catplot(x="analyzer", y="aligmnent_index",
-                    hue="displacement", col="filter",
-                    data=df, kind="box",
-                    height=8, aspect=.7)
+                           hue="displacement", col="filter",
+                           data=df, kind="box",
+                           height=8, aspect=.7)
     
     return sns_plot
 
@@ -144,8 +144,9 @@ def make_iop_plot(df):
                            hue="displacement", col="filter",
                            data=df, kind="box",
                            height=8, aspect=.7)
-    #plt.xlabel
+
     return sns_plot
+
 
 def make_lcorr_plot(lcorrdf):
     """
@@ -153,13 +154,13 @@ def make_lcorr_plot(lcorrdf):
 
     """
     sns_plot = sns.catplot(x="magnification", y="fraction_of_max_lcorr",
-                           hue="filter", col = "analyzer",
+                           hue="filter", col="analyzer",
                            data=lcorrdf, kind="box",
                            height=8, aspect=.7, )
     sns_plot.set_axis_labels("Magnification", "Fraction of theoretical maximum correlation length")
 
-
     return sns_plot
+
 
 def make_lcorr_proces_time_plot(lcorrdf):
     """
@@ -167,8 +168,8 @@ def make_lcorr_proces_time_plot(lcorrdf):
 
     """
     sns_plot = sns.catplot(x="analyzer", y="process_time",
-                    data=lcorrdf, kind="box",
-                    height=8, aspect=.7)
+                           data=lcorrdf, kind="box",
+                           height=8, aspect=.7)
 
     sns_plot.set_axis_labels("Analyzer", "Process time (s)")
 
@@ -187,6 +188,7 @@ def make_fb_flow_analyzer(ch):
     
     return analyzer
 
+
 def make_piv_analyzer(ch):
     """
     Creates an openPivAnalyzer and performs optical flow calculations with default settings in um/s.
@@ -199,6 +201,7 @@ def make_piv_analyzer(ch):
     analyzer.doOpenPIV()
     
     return analyzer
+
 
 def get_data_as_df(analyzer, analyzername):
     """
@@ -238,12 +241,13 @@ def get_data_as_df(analyzer, analyzername):
     df["displacement"] = displacemet
     
     if "MED" in analyzer.channel.name:
-        filter = "Median"
+        filtr = "Median"
     else:
-        filter = "None"
-    df["filter"] = filter
+        filtr = "None"
+    df["filter"] = filtr
     
     return df
+
 
 def combine_lcorr_and_process_time_to_df(lcorrdf, processtimedict, file_name, analyzer_name):
     """
@@ -270,7 +274,7 @@ def combine_lcorr_and_process_time_to_df(lcorrdf, processtimedict, file_name, an
 
     lcorrdf["filter"] = filter_name
 
-    #max_lcorrs are given by pixel size * pixels per image column -1 (1607 for the test data)
+    # max_lcorrs are given by pixel size * pixels per image column -1 (1607 for the test data)
     max_lcorrs = {
         "10X": 1805.46,
         "15X": 1203.64,
@@ -284,7 +288,6 @@ def combine_lcorr_and_process_time_to_df(lcorrdf, processtimedict, file_name, an
         fraction_of_max_lcorr=lambda df: df['Cvv_um'] / df['max_lcorr'])
 
     return lcorrdf
-
 
 
 def run_base_validation(inpath, outpath):
@@ -324,6 +327,7 @@ def run_base_validation(inpath, outpath):
     iop_plot = make_iop_plot(df)
     savename = outpath / "iop_compare.png"
     plt.savefig(savename)
+
 
 def run_5sigma_validation(inpath, outpath):
     """
@@ -372,6 +376,4 @@ def run_5sigma_validation(inpath, outpath):
     lcorr_plot = make_lcorr_plot(alldata)
     savename = outpath / "5sigma_lcorr_compare.png"
     plt.savefig(savename)
-
     #plt.show()
-
