@@ -160,30 +160,8 @@ class Channel(object):
         :return: pixel size in um
         :rtype: float
         """
-        if self.tif.is_micromanager:
-            # if the file is a MM file this branch determines which version
-            one4_regex = re.compile("1\.4\.[\d]")  # matches 1.4.digit
-            gamma_regex = re.compile("gamma")      # matches "gamma"
-            beta_regex = re.compile("beta")        # matches "beta"
     
-            version = self.tif.micromanager_metadata["Summary"]["MicroManagerVersion"]
-    
-            if (re.search(beta_regex, version) is not None):
-                px_size_um = self.tif.micromanager_metadata['PixelSize_um']
-    
-                return px_size_um
-    
-            elif (re.search(one4_regex, version) is not None):
-                px_size_um = self.tif.micromanager_metadata['Summary']['PixelSize_um']
-    
-                return px_size_um
-    
-            elif (re.search(gamma_regex, version) is not None):
-                px_size_um = self.tif.micromanager_metadata['PixelSizeUm']
-    
-                return px_size_um
-    
-        elif self.tif.is_imagej:
+        if self.tif.is_imagej:
             # this is not as clean due to the undocumented nature of imageJ metadata
             # IJ uses TIF-tag to store pixel size information, but does not confer to standard unit of 'cm' or 'inch'
     
@@ -207,11 +185,10 @@ class Channel(object):
     
             elif (sz_unit in micrometer_strings):
                 px_size_um = px_size
-    
-            return px_size_um
-    
-        else:
-            raise ValueError("No pixel size found!")
+
+
+        return px_size_um
+
     
     def _read_finteval(self):
         """
