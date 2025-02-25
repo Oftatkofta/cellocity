@@ -208,10 +208,19 @@ class Channel(object):
             elif (sz_unit in micrometer_strings):
                 px_size_um = px_size
     
+<<<<<<< Updated upstream
             return px_size_um
     
         else:
             raise ValueError("No pixel size found!")
+=======
+            # Add else case to handle unknown units
+            else:
+                raise ValueError(f"Unknown size unit: {sz_unit}")
+    
+        return px_size_um
+
+>>>>>>> Stashed changes
     
     def _read_finteval(self):
         """
@@ -225,8 +234,9 @@ class Channel(object):
     
         MM versions used for testing:
           MicroManagerVersion 1.4.23 20180220
-          MicroManagerVersion 2.0.0-gamma1 20190527
           MicroManagerVersion 2.0.0-beta3 20180923
+          MicroManagerVersion 2.0.0-gamma1 20190527
+          MicroManagerVersion 2.0.0
     
         If the data set is from ImageJ the method will do its best to transform the time unit in to ms
     

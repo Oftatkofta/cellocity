@@ -43,5 +43,9 @@ setup(
         'Research group': 'https://www.imbim.uu.se/research-groups/infection-and-defence/sellin-mikael/',
         'Source': 'https://github.com/oftatkofta/cellocity',
     },
-    
+    entry_points={
+        'console_scripts': [
+            'cellocity-gui=cellocity.gui:main',
+        ],
+    },
 )
