@@ -208,19 +208,10 @@ class Channel(object):
             elif (sz_unit in micrometer_strings):
                 px_size_um = px_size
     
-<<<<<<< Updated upstream
             return px_size_um
     
         else:
             raise ValueError("No pixel size found!")
-=======
-            # Add else case to handle unknown units
-            else:
-                raise ValueError(f"Unknown size unit: {sz_unit}")
-    
-        return px_size_um
-
->>>>>>> Stashed changes
     
     def _read_finteval(self):
         """
