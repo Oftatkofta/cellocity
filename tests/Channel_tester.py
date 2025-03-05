@@ -1,46 +1,45 @@
-from cellocity.channel import Channel, MedianChannel
-import cellocity.analysis as analysis
-from tifffile import TiffFile
+import pytest
+import numpy as np
 import os
 from pathlib import Path
-from matplotlib import pyplot as plt
+import tifffile
+from cellocity.channel import Channel, MedianChannel, normalization_to_8bit
+from cellocity.tiffloader import TiffLoader
+from cellocity.analysis import FarenbackAnalyzer, FlowAnalysis, FlowSpeedAnalysis, AlignmentIndexAnalysis, IopAnalysis, FiveSigmaAnalysis
+import napari
 
-onefour = r"C:\\Users\\Jens\\Documents\\_Microscopy\\FrankenScope2\\_Pilar\\fucci_GFP-geminin_RFP-cdt1_7-5min_1_MMStack_Pos0.ome.tif"
-beta = r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\_Pilar\raw_STm infection_10x__1_MMStack_MOI2.ome.tif"
-ij = r"C:\\Users\\Jens\\Documents\\_Microscopy\\FrankenScope2\\_Pilar\\fucci_GFP-geminin_RFP-cdt1_7-5min_IJ.tif"
+TEST_DATA_DIR = r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Calibration stuff\MM_2-0-3_testfiles\subset"
+TEST_FILE = TEST_DATA_DIR + r"\5TP-10s_1Z_3Ch_4pos_1_MMStack_Pos-2-000_001.ome.tif"
 
-testfiles={"one4" : onefour,
-          "ij" : ij,
-          "beta" : beta}
+def test_tiff_loader():
+    loader = TiffLoader(TEST_FILE, debug=True)
+    chan = loader.extract_channel(0)
+    #print(chan)
+    
+def test_channel():
+    loader = TiffLoader(TEST_FILE, debug=True)
+    chan = Channel(0, loader, debug=True)
+    print("\nTesting MedianChannel creation...")
+    median_chan = MedianChannel(chan, debug=True)
+    
+    # Create Farneback analyzer
+    farenback_analyzer = FarenbackAnalyzer(chan, unit="um/s")
+    chan_analysis = FlowAnalysis(farenback_analyzer)
+    drawn_flow= chan_analysis.draw_all_flow_frames_superimposed()
+    speed_analysis = FlowSpeedAnalysis(farenback_analyzer)
+    speed_analysis.calculateSpeeds()
+    print(speed_analysis.getAvgSpeeds())
+    alignment_index_analysis = AlignmentIndexAnalysis(farenback_analyzer)
+    alignment_index_analysis.calculateAverage()
+    print(alignment_index_analysis.getAvgAlignIdxs())
+    iop_analysis = IopAnalysis(farenback_analyzer)
+    iop_analysis.calculateIops()
+    print(iop_analysis.getIops())
+    five_sigma_analysis = FiveSigmaAnalysis(farenback_analyzer)
+    five_sigma_analysis.calculateFiveSigma()
+    print(five_sigma_analysis.getFiveSigma())
 
-savepath = Path(r"C:\Users\Jens\Desktop\temp")
-
-for testcase in testfiles.keys():
-    tif = TiffFile(testfiles[testcase])
-    ch0 = Channel(0, tif, testcase)
-    ch0.trim(4,16)
-
-    n = ch0.getArray()
-
-    for glideFlag in [False, True]:
-        print("Glideflag:", glideFlag)
-        ch0_median = MedianChannel(ch0,doGlidingProjection=glideFlag, frameSamplingInterval=4)
-        print(len(ch0_median.elapsedTimes_ms), ch0_median.elapsedTimes_ms)
-        print(ch0_median.getActualFrameIntevals_ms(), ch0_median.getIntendedFrameInterval_ms(), ch0_median.doFrameIntervalSanityCheck())
-
-        a_ch0 = analysis.FarenbackAnalyzer(ch0_median, "um/h")
-        a_ch0.doFarenbackFlow()
-        speeds_ch0 = analysis.FlowSpeedAnalysis(a_ch0)
-        speeds_ch0.calculateSpeeds()
-        speeds_ch0.calculateAverageSpeeds()
-        speeds_ch0.calculateHistograms()
-        #speeds_ch0.saveArrayAsTif(savepath)
-        speeds_ch0.saveCSV(savepath, fname=speeds_ch0.getChannelName() + "glide-" + str(glideFlag) + ".csv", tunit="min")
-
-
-
-
-
-tif.close()
+if __name__ == "__main__":
+    test_channel()
 
 

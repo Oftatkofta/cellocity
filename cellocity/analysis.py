@@ -94,7 +94,7 @@ class FlowAnalyzer(Analyzer):
     
         """
     
-        finterval_s = self.channel.finterval_ms / 1000
+        finterval_s = self.channel.actualFrameInterval_ms / 1000
     
         if self.unit == "um/min":
             frames_per_min = round(60 / finterval_s, 2)
@@ -158,6 +158,18 @@ class FlowAnalyzer(Analyzer):
             warnings.warn("No flow has been calculated!")
         return self.flows
 
+    def saveArrayAsTif(self, filepath):
+        """Save flow array as TIFF file"""
+        if self.flows is None:
+            raise ValueError("No flow data to save")
+            
+        # Ensure parent directory exists
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Save as TIFF
+        with tifffile.TiffWriter(str(filepath)) as tif:
+            tif.write(self.flows)
+
 
 class FarenbackAnalyzer(FlowAnalyzer):
     """
@@ -172,15 +184,20 @@ class FarenbackAnalyzer(FlowAnalyzer):
         """
         super().__init__(channel, unit)
         self.pxSize_um = self.channel.pxSize_um #optical flow does not change pixel size
+        self.pyr_scale = 0.5
+        self.levels = 3
+        self.winsize = 15
+        self.iterations = 3
+        self.poly_n = 5
+        self.poly_sigma = 1.2
+        self.flags = 0
+        self.vector_field = None
+        self.magnitude_array = None
+        self.angle_array = None
+        self._do_analysis()
     
-    def doFarenbackFlow(self, pyr_scale=0.5, levels=3, winsize=15, iterations=3, poly_n=5, poly_sigma=1.2, flags=0):
-        """
-        Calculates Farenback flow for a single channel time lapse with validated default parameters.
-    
-        returns numpy array of dtype int32 with flow in the unit px/frame
-        Output values need to be multiplied by a scalar to be converted to speeds.
-    
-        """
+    def _do_analysis(self):
+        """Run the Farneback optical flow analysis."""
         t0 = time.time()
         arr = self.channel.getArray()
     
@@ -197,13 +214,13 @@ class FarenbackAnalyzer(FlowAnalyzer):
             flow = cv.calcOpticalFlowFarneback(arr[i],
                                                arr[i + 1],
                                                None,
-                                               pyr_scale,
-                                               levels,
-                                               winsize,
-                                               iterations,
-                                               poly_n,
-                                               poly_sigma,
-                                               flags)
+                                               self.pyr_scale,
+                                               self.levels,
+                                               self.winsize,
+                                               self.iterations,
+                                               self.poly_n,
+                                               self.poly_sigma,
+                                               self.flags)
     
             self.flows[i] = flow.astype(np.float32)
             self.updateProgress(progress_increment)
@@ -771,42 +788,43 @@ class FlowSpeedAnalysis(FlowAnalysis):
         #restore original array shape in case further analysis is performed
         self.speeds.shape = original_shape
     
-    def saveCSV(self, outdir, fname=None, tunit ="s"):
+    def saveCSV(self, filepath, tunit="s"):
         """
-        Saves a csv of average speeds per frame in outdir.
-    
-        :param outdir: Directory where output is stored
-        :type outdir: pathlib.Path
-        :param fname: filename, defaults to channel name + speeds.csv
-        :type fname: str
-        :param tunit: Time unit in output one of: "s", "min", "h", "days"
-        :type tunit: str
-        :return:
+        Saves a csv of average speeds per frame.
+        
+        Args:
+            filepath (pathlib.Path): Path to save the CSV file
+            tunit (str): Time unit in output, one of: "s", "min", "h", "days"
         """
-        # print("Saving csv of mean speeds...")
-    
-        if fname is None:
-            fname = self.analyzer.channel.name + "_speeds.csv"
-    
-        arr = self.getAvgSpeeds()
-    
+        if self.speeds is None:
+            raise ValueError("No speed data to save")
+        
+        # Ensure parent directory exists
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Calculate time points
         time_multipliers = {
             "s": 1,
             "min": 1/60,
             "h": 1/(60*60),
             "days": 1/(24*60*60)
         }
-        assert tunit in time_multipliers.keys(), "tunit has to be one of: " + str(time_multipliers.keys())
-    
-        fr_interval_multiplier = time_multipliers.get(tunit) * (self.analyzer.channel.finterval_ms/1000)
-    
-        timepoints_abs = np.arange(0, arr.shape[0], dtype='float32') * fr_interval_multiplier
-    
-        df = pd.DataFrame(arr, index=timepoints_abs, columns=["AVG_frame_flow_" + self.analyzer.unit])
-        df.index.name = "Time("+tunit+")"
-    
-        saveme = outdir / fname
-        df.to_csv(saveme)
+        if tunit not in time_multipliers:
+            raise ValueError(f"tunit must be one of: {list(time_multipliers.keys())}")
+        
+        # Calculate time points
+        frame_interval = self.analyzer.channel.finterval_ms/1000  # Convert to seconds
+        time_multiplier = time_multipliers[tunit]
+        timepoints = [i * frame_interval * time_multiplier for i in range(len(self.speeds))]
+        
+        # Create DataFrame
+        df = pd.DataFrame({
+            f"Time ({tunit})": timepoints,
+            f"Speed ({self.analyzer.unit})": self.speeds
+        })
+        
+        # Save CSV
+        df.to_csv(filepath, index=False)
 
 class AlignmentIndexAnalysis(FlowAnalysis):
     """
@@ -1143,13 +1161,12 @@ class IopAnalysis(FlowAnalysis):
 
 class FiveSigmaAnalysis(FlowAnalysis):
     """
-    Calculates the 5-sigma corrleation length for each frame of flow (see Lång et. al 2018 or the documentation for a
+    Calculates the 5-sigma correlation length for each frame of flow (see Lång et. al 2018 or the documentation for a
     more detailed explanation).
 
-    The 5-:math:`{\sigma}` correlation length was defined as the largest distance, :math:`r`, where the average angle
-    between two velocity vectors :math:`r` micrometers apart was :math:`<90°` with a statistical significance level of
-    5 :math:`\sigma` :math:`(p=3×10^{−7})`.
-
+    The 5-σ correlation length was defined as the largest distance, r, where the average angle
+    between two velocity vectors r micrometers apart was <90° with a statistical significance level of
+    5σ (p=3×10^(-7)).
     """
 
     def __init__(self, flowanalyzer, maxdist=None):
@@ -1217,7 +1234,7 @@ class FiveSigmaAnalysis(FlowAnalysis):
         """
 
         array_width = self.flow_shape[2]  # number of columns
-        array_height = self..flow_shape[1]  # number of rows
+        array_height = self.flow_shape[1]  # number of rows
         v0_r = v0_cord[0]  # row number of v0
         v0_c = v0_cord[1]  # column number of v0
 
@@ -1345,8 +1362,8 @@ class FiveSigmaAnalysis(FlowAnalysis):
             # Sometimes openPIV outputs strange values
             sanitized_cos_theta_list = [a for a in cos_theta_list if a <= 1.0]
             if len(sanitized_cos_theta_list) != len(cos_theta_list):
-            print("Bad angles at frame {} and radius {}, number ok: {}, not ok: {}".format(
-                frame, radius, len(sanitized_cos_theta_list), len(cos_theta_list) - len(sanitized_cos_theta_list)))
+                print("Bad angles at frame {} and radius {}, number ok: {}, not ok: {}".format(
+                    frame, radius, len(sanitized_cos_theta_list), len(cos_theta_list) - len(sanitized_cos_theta_list)))
 
             if len(sanitized_cos_theta_list) == 0:
                 print("No acceptable angles left, aborting!")

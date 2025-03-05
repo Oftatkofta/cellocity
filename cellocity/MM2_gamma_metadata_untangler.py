@@ -8,13 +8,16 @@ Created on Fri May 20 14:56:37 2022
 import channel as ch
 from tifffile import TiffFile
 import tifffile
+import numpy as np
+import pathlib
 
 mm2_gamma = r"C:\Users\Jens\Desktop\hOGM_1_MMStack_Default.ome.tif\hOGM_1_MMStack_Default.ome.tif"
 mm2_beta = r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\_Pilar\EXP-18-BP4241 Live imaging STm invasion monolayer different stages\Day5_WellD_afterinfection__1\Day5_WellD_afterinfection__1_MMStack_Pos0.ome.tif"
 mm_14 = r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Calibration stuff\180405 Hela 100X Zstack\100X_Ap2.5_HeLa_1X_disk_in_1\100X_Ap2.5_HeLa_1X_disk_in_1_MMStack.ome.tif"
 mm2 = r"F:\anisa\220601 transformation screen\PEBr-1_4_1\PEBr-1_4_1_MMStack_B2-Site_0.ome.tif"
 mm2_flex = r"F:\convallaria\flexoscope\live_5pc_glucose_PBS_1\live_5pc_glucose_PBS_1_MMStack_Default.ome.tif"
-testfiles = [mm2_gamma, mm2, mm2_flex]
+mm2_latest = r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Calibration stuff\MM_2-0-3_testfiles\5TP-0ms_2Z_3Ch_4pos_1_MMStack_Pos-1-000_000.ome.tif"
+testfiles = [mm2_latest]
 
 def read_metadata(filename):
     with TiffFile(filename) as tif:
@@ -43,8 +46,32 @@ def make_channel(filename, ch_idx, name=None):
 
 
 if __name__ == "__main__":
-    for file in testfiles:
-        #read_metadata(file)
-        channel = make_channel(file, 0)
-        print(channel.name)
-        print(channel.getArray().shape)
+    file = mm2_latest
+    print("\nAnalyzing:", file)
+    
+    # Look at filename pattern
+    path = pathlib.Path(file)
+
+    
+    with TiffFile(file) as tif:
+        # Print basic file info
+        print("\nFile structure:")
+        print(f"Number of pages: {len(tif.pages)}")
+        print(f"Is MicroManager: {tif.is_micromanager}")
+        print(f"Is ImageJ: {tif.is_imagej}")
+        
+        # Look at first page shape and type
+        if len(tif.pages) > 0:
+            page = tif.pages[0]
+            print("\nFirst page info:")
+            print(f"Shape: {page.shape}")
+            print(f"Dtype: {page.dtype}")
+            print("\nFirst page MM metadata:")
+            if "MicroManagerMetadata" in page.tags:
+                mm_meta = page.tags["MicroManagerMetadata"].value
+                print(f"ChannelIndex: {mm_meta.get('ChannelIndex')}")
+                print(f"Frame: {mm_meta.get('Frame')}")
+                print(f"PixelSizeUm: {mm_meta.get('PixelSizeUm')}")
+                print(f"ElapsedTime-ms: {mm_meta.get('ElapsedTime-ms')}")
+        
+
