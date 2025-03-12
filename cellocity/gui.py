@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                             QPushButton, QLabel, QFileDialog, QComboBox,
                             QSpinBox, QDoubleSpinBox, QApplication, QScrollArea,
-                            QProgressBar, QGroupBox, QCheckBox)
+                            QProgressBar, QGroupBox, QCheckBox, QMessageBox, QFormLayout)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPixmap
 import sys
@@ -16,6 +16,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cellocity.channel import Channel, normalization_to_8bit
 from cellocity.analysis import FarenbackAnalyzer, OpenPivAnalyzer, FlowSpeedAnalysis
+from tiffloader import TiffLoader
 
 class CellocityGUI(QMainWindow):
     def __init__(self):
@@ -27,7 +28,7 @@ class CellocityGUI(QMainWindow):
         self.channel = None
         self.analyzer = None
         self.analysis = None
-        self.tif = None
+        self.loader = None
         self.position_files = None
         
         # Create main widget and layout
@@ -44,80 +45,18 @@ class CellocityGUI(QMainWindow):
         file_layout = QHBoxLayout()
         self.file_label = QLabel("No file selected")
         select_button = QPushButton("Select File")
-        select_button.clicked.connect(self.select_file)
+        select_button.clicked.connect(self.load_file)
         file_layout.addWidget(self.file_label)
         file_layout.addWidget(select_button)
         left_layout.addLayout(file_layout)
         
         # Analysis parameters
-        param_layout = QVBoxLayout()
-        
-        # Channel selection
-        channel_layout = QHBoxLayout()
-        channel_layout.addWidget(QLabel("Channel:"))
-        self.channel_select = QComboBox()
-        self.channel_select.currentIndexChanged.connect(self.create_channel)
-        channel_layout.addWidget(self.channel_select)
-        param_layout.addLayout(channel_layout)
-        
-        # Frame selection
-        frame_layout = QHBoxLayout()
-        frame_layout.addWidget(QLabel("Frame:"))
-        self.frame_select = QSpinBox()
-        self.frame_select.setMinimum(0)
-        self.frame_select.valueChanged.connect(self.update_preview)
-        frame_layout.addWidget(self.frame_select)
-        param_layout.addLayout(frame_layout)
-        
-        # Analysis type selection
-        type_layout = QHBoxLayout()
-        type_layout.addWidget(QLabel("Analysis Type:"))
-        self.analysis_type = QComboBox()
-        self.analysis_type.addItems(["Farenback", "OpenPIV"])
-        type_layout.addWidget(self.analysis_type)
-        param_layout.addLayout(type_layout)
-        
-        # Unit selection
-        unit_layout = QHBoxLayout()
-        unit_layout.addWidget(QLabel("Unit:"))
-        self.unit_select = QComboBox()
-        self.unit_select.addItems(["um/s", "um/min", "um/h"])
-        unit_layout.addWidget(self.unit_select)
-        param_layout.addLayout(unit_layout)
-        
-        # Add frame range selection after frame preview selection
-        range_group = QGroupBox("Analysis Range")
-        range_layout = QVBoxLayout()
-        
-        # Checkbox to enable/disable range selection
-        self.use_range = QCheckBox("Analyze subset of frames")
-        self.use_range.stateChanged.connect(self.toggle_range_selection)
-        range_layout.addWidget(self.use_range)
-        
-        # Range selection
-        range_controls = QHBoxLayout()
-        range_controls.addWidget(QLabel("Start:"))
-        self.range_start = QSpinBox()
-        self.range_start.setMinimum(0)
-        self.range_start.setEnabled(False)
-        range_controls.addWidget(self.range_start)
-        
-        range_controls.addWidget(QLabel("Stop:"))
-        self.range_stop = QSpinBox()
-        self.range_stop.setMinimum(1)
-        self.range_stop.setEnabled(False)
-        range_controls.addWidget(self.range_stop)
-        
-        range_layout.addLayout(range_controls)
-        range_group.setLayout(range_layout)
-        param_layout.addWidget(range_group)
-        
-        left_layout.addLayout(param_layout)
+        self.setupUI()
         
         # Analysis buttons
         button_layout = QHBoxLayout()
         analyze_button = QPushButton("Run Analysis")
-        analyze_button.clicked.connect(self.run_analysis)
+        analyze_button.clicked.connect(self.runAnalysis)
         save_button = QPushButton("Save Results")
         save_button.clicked.connect(self.save_results)
         button_layout.addWidget(analyze_button)
@@ -144,152 +83,174 @@ class CellocityGUI(QMainWindow):
         self.preview_label.setAlignment(Qt.AlignCenter)
         right_panel.setWidget(self.preview_label)
 
-    def get_channel_count(self):
-        """Get number of channels in the file"""
-        if self.tif is None:
-            return 0
-            
-        if self.tif.is_micromanager:
-            # Get from Summary if available
-            if 'Summary' in self.tif.micromanager_metadata:
-                summary = self.tif.micromanager_metadata['Summary']
-                if 'Channels' in summary:
-                    return summary['Channels']
-            # Fallback to IndexMap
-            return len(set(self.tif.micromanager_metadata["IndexMap"]["Channel"]))
-        elif self.tif.is_imagej:
-            return self.tif.imagej_metadata.get('channels', 1)
-        return 1
+    def setupUI(self):
+        """Setup the GUI elements."""
+        # Create central widget first and set it
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        
+        # Create main layout with parent
+        self.main_layout = QVBoxLayout(self.central_widget)
+        
+        # Create all widgets with proper parent
+        self.metadata_label = QLabel(self.central_widget)
+        self.metadata_label.setWordWrap(True)
+        
+        # File selection
+        file_layout = QHBoxLayout()
+        self.load_button = QPushButton("Load File", self.central_widget)
+        self.load_button.clicked.connect(self.load_file)
+        file_layout.addWidget(self.load_button)
+        self.main_layout.addLayout(file_layout)
+        
+        # Channel and slice selection
+        select_layout = QHBoxLayout()
+        
+        # Channel selector
+        channel_label = QLabel("Channel:", self.central_widget)
+        self.channel_select = QComboBox(self.central_widget)
+        select_layout.addWidget(channel_label)
+        select_layout.addWidget(self.channel_select)
+        
+        # Z-slice selector
+        self.slice_label = QLabel("Z-Slice:", self.central_widget)
+        self.slice_select = QSpinBox(self.central_widget)
+        self.slice_select.setMinimum(0)
+        self.slice_select.setValue(0)
+        select_layout.addWidget(self.slice_label)
+        select_layout.addWidget(self.slice_select)
+        
+        # Hide slice selector initially
+        self.slice_label.hide()
+        self.slice_select.hide()
+        
+        self.main_layout.addLayout(select_layout)
+        
+        # Frame range
+        self.range_group = QGroupBox("Frame Range", self.central_widget)
+        range_layout = QFormLayout()
+        
+        self.use_range = QCheckBox("Use Range", self.range_group)
+        range_layout.addRow(self.use_range)
+        
+        self.range_start = QSpinBox(self.range_group)
+        self.range_start.setMinimum(0)
+        range_layout.addRow("Start:", self.range_start)
+        
+        self.range_stop = QSpinBox(self.range_group)
+        self.range_stop.setMinimum(1)
+        range_layout.addRow("Stop:", self.range_stop)
+        
+        self.range_group.setLayout(range_layout)
+        self.main_layout.addWidget(self.range_group)
+        
+        # Add metadata label to layout
+        self.main_layout.addWidget(self.metadata_label)
+        
+        # Progress and status
+        self.progress_bar = QProgressBar(self.central_widget)
+        self.main_layout.addWidget(self.progress_bar)
+        
+        self.status_label = QLabel(self.central_widget)
+        self.main_layout.addWidget(self.status_label)
+        
+        # Run button
+        self.run_button = QPushButton("Run Analysis", self.central_widget)
+        self.run_button.clicked.connect(self.runAnalysis)
+        self.main_layout.addWidget(self.run_button)
 
-    def get_channel_names(self):
-        """Get channel names from metadata if available"""
-        if self.tif is None:
-            return []
-            
-        if self.tif.is_micromanager:
-            if 'Summary' in self.tif.micromanager_metadata:
-                summary = self.tif.micromanager_metadata['Summary']
-                if 'ChNames' in summary:
-                    return summary['ChNames']
-        return [f"Channel {i}" for i in range(self.get_channel_count())]
-
-    def read_metadata(self, tif):
-        """Read and print metadata from tif file"""
-        if tif.is_micromanager:
-            mm_meta = tif.micromanager_metadata
-            mm_keys = list(mm_meta.keys())
-            print("\nMicroManager Metadata:")
-            print("Keys:", mm_keys)
-            for key in mm_keys:
-                print(f"{key}::", mm_meta[key])
-            
-        if tif.is_imagej:
-            ij_meta = tif.imagej_metadata
-            ij_keys = list(ij_meta.keys())
-            print("\nImageJ Metadata:")
-            print("Keys:", ij_keys)
-            for key in ij_keys:
-                print(f"{key}:::", ij_meta[key])
-
-    def select_file(self):
-        """Open file dialog to select input image file"""
+    def load_file(self):
+        """Load a TIFF file and update the GUI."""
         filename, _ = QFileDialog.getOpenFileName(
             self,
-            "Select Image File",
+            "Open TIFF File",
             "",
-            "Image Files (*.tif *.tiff);;All Files (*)"
+            "TIFF Files (*.tif *.tiff);;All Files (*)"
         )
-        
         if filename:
             try:
-                self.file_label.setText(os.path.basename(filename))
-                
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    self.tif = tifffile.TiffFile(filename)
-                
-                # Update channel selection
-                n_channels = self.get_channel_count()
-                channel_names = self.get_channel_names()
-                
-                self.channel_select.clear()
-                self.channel_select.addItems(channel_names)
-                
-                # Channel will be created by the combobox signal
-                self.channel_select.setCurrentIndex(0)
-                
+                self.loader = TiffLoader(filename)
+                self.updateMetadata()
+                self.status_label.setText(f"Loaded: {filename}")
             except Exception as e:
-                self.status_label.setText(f"Error loading file: {str(e)}")
-                print(f"Error loading file: {str(e)}")
+                QMessageBox.critical(self, "Error", f"Error loading file: {str(e)}")
+                self.loader = None
+
+    def get_channel_count(self):
+        """Get the number of channels in the loaded file."""
+        if not self.loader:
+            return 0
+        return self.loader.n_channels
+
+    def get_channel_names(self):
+        """Get list of channel names if available."""
+        if not self.loader:
+            return []
+        if self.loader.channel_names:
+            return self.loader.channel_names
+        return [f"Channel {i}" for i in range(self.get_channel_count())]
+
+    def read_metadata(self):
+        """Read metadata from the loaded file."""
+        if not self.loader:
+            return {}
+        
+        metadata = {}
+        metadata['Channels'] = self.loader.n_channels
+        metadata['Frames'] = self.loader.n_frames
+        metadata['Slices'] = self.loader.n_slices
+        metadata['Frame Interval (ms)'] = self.loader.intended_frame_interval_ms
+        metadata['Pixel Size (µm)'] = self.loader.pixel_size_um
+        
+        # Update frame range controls
+        self.range_start.setMaximum(self.loader.n_frames - 1)
+        self.range_stop.setMaximum(self.loader.n_frames)
+        self.range_stop.setValue(self.loader.n_frames)
+        
+        # Update slice selector
+        if self.loader.n_slices > 1:
+            self.slice_label.show()
+            self.slice_select.show()
+            self.slice_select.setMaximum(self.loader.n_slices - 1)
+            self.slice_select.setValue(0)  # Reset to first slice
+        else:
+            self.slice_label.hide()
+            self.slice_select.hide()
+            self.slice_select.setValue(0)
+        
+        return metadata
 
     def create_channel(self):
-        """Create channel object from current selection"""
-        try:
-            if self.tif is None:
-                return
+        """Create a Channel object from the current settings."""
+        if not self.loader:
+            raise ValueError("No file loaded")
             
-            # Create new channel with debug enabled
-            ch_index = self.channel_select.currentIndex()
-            label = pathlib.Path(self.tif.filename).stem
-            name = f"{label}_Ch{ch_index + 1}"
-            
-            self.channel = Channel(
-                chIndex=ch_index,
-                tiffFile=self.tif,
-                name=name,
-                debug=True  # Enable debug output
-            )
-            
-            # Force array loading and verify
-            array = self.channel.getArray()
-            if array.size == 0:
-                raise ValueError("Failed to load image data")
-            
-            # Update UI
-            self.frame_select.setMaximum(array.shape[0] - 1)
-            self.range_stop.setMaximum(array.shape[0])
-            self.update_preview()
-            
-        except Exception as e:
-            self.status_label.setText(f"Error: {str(e)}")
-            print(f"Error creating channel: {str(e)}")
+        print(f"Debug - loader type: {type(self.loader)}")
+        
+        channel_idx = self.channel_select.currentIndex()
+        slice_idx = self.slice_select.value() if self.loader.n_slices > 1 else 0
+        
+        return Channel(channel_idx,self.loader, slice_idx)
 
     def update_preview(self):
-        """Update preview when frame changes"""
-        if self.channel is None:
-            return
-        
+        """Update the preview image."""
         try:
-            # Get array for current frame
-            array = self.channel.getArray()
-            if array.size > 0:
-                frame_idx = self.frame_select.value()
-                if frame_idx < array.shape[0]:
-                    frame = array[frame_idx]
-                    frame_8bit = normalization_to_8bit(frame)
-                    
-                    # Convert to QImage
-                    height, width = frame_8bit.shape
-                    bytes_per_line = width
-                    image = QImage(frame_8bit.data, width, height, bytes_per_line, QImage.Format_Grayscale8)
-                    
-                    # Scale to fit while maintaining aspect ratio
-                    pixmap = QPixmap.fromImage(image)
-                    scaled_pixmap = pixmap.scaled(400, 400, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                    
-                    # Display
-                    self.preview_label.setPixmap(scaled_pixmap)
-                else:
-                    self.status_label.setText(f"Frame {frame_idx} out of range")
-                    self.preview_label.clear()
-            else:
-                self.status_label.setText("No image data available")
-                self.preview_label.clear()
+            if not self.loader:
+                return
+                
+            channel = self.create_channel()
+            array = channel.getArray()
+            
+            if array.size == 0:
+                return
+                
+            frame = min(self.frame_select.value(), array.shape[0] - 1)
+            image = array[frame]
+            
+            # Update preview display...
             
         except Exception as e:
-            self.status_label.setText(f"Error updating preview: {str(e)}")
-            print(f"Preview error: {str(e)}")
-            self.preview_label.clear()
+            QMessageBox.critical(self, "Error", f"Error updating preview: {str(e)}")
 
     def toggle_range_selection(self, state):
         """Enable/disable range selection spinboxes"""
@@ -297,69 +258,25 @@ class CellocityGUI(QMainWindow):
         self.range_start.setEnabled(enabled)
         self.range_stop.setEnabled(enabled)
 
-    def run_analysis(self):
-        """Run the selected analysis"""
-        if not self.channel:
-            self.status_label.setText("Please select a file first")
-            return
-            
+    def runAnalysis(self):
+        """Run Farneback analysis on the current channel."""
         try:
-            self.progress_bar.setVisible(True)
-            self.progress_bar.setValue(0)
+            channel = self.create_channel()
             
-            # If using range, trim the channel
+            # Get frame range if specified
             if self.use_range.isChecked():
                 start = self.range_start.value()
                 stop = self.range_stop.value()
-                if start >= stop:
-                    raise ValueError("Start frame must be less than stop frame")
-                if start >= self.channel.getArray().shape[0]:
-                    raise ValueError("Start frame exceeds number of frames")
-                if stop > self.channel.getArray().shape[0]:
-                    raise ValueError("Stop frame exceeds number of frames")
-                
-                self.channel.trim(start, stop)
-                if self.channel.getArray().size == 0:
-                    raise ValueError("No frames left after trimming")
+                channel.trim(start, stop)
             
-            # Validate metadata
-            if self.channel.pxSize_um is None or self.channel.pxSize_um <= 0:
-                self.channel.pxSize_um = 1.0
-                self.status_label.setText("Warning: Using default pixel size of 1 μm")
-            
-            if self.channel.finterval_ms is None or self.channel.finterval_ms <= 0:
-                self.channel.finterval_ms = 1000.0
-                self.status_label.setText("Warning: Using default frame interval of 1s")
-            
-            # Create analyzer based on selection
-            if self.analysis_type.currentText() == "Farenback":
-                self.analyzer = FarenbackAnalyzer(
-                    self.channel,
-                    self.unit_select.currentText()
-                )
-                self.analyzer.doFarenbackFlow()
-                self.progress_bar.setValue(50)
-            else:
-                self.analyzer = OpenPivAnalyzer(
-                    self.channel,
-                    self.unit_select.currentText()
-                )
-                self.analyzer.doOpenPIV()
-                self.progress_bar.setValue(50)
-                
-            # Create speed analysis
-            self.analysis = FlowSpeedAnalysis(self.analyzer)
-            self.analysis.calculateSpeeds()
+            # Create Farneback analyzer
+            self.analyzer = FarenbackAnalyzer(channel)
             
             self.progress_bar.setValue(100)
-            self.status_label.setText("Analysis completed successfully")
+            self.status_label.setText("Analysis complete")
             
         except Exception as e:
-            self.status_label.setText(f"Error during analysis: {str(e)}")
-            import traceback
-            traceback.print_exc()
-        finally:
-            self.progress_bar.setVisible(False)
+            QMessageBox.critical(self, "Error", f"Error in analysis: {str(e)}")
 
     def save_results(self):
         """Save analysis results"""
@@ -378,10 +295,10 @@ class CellocityGUI(QMainWindow):
                 save_path = pathlib.Path(save_dir)
                 
                 # Create base filename from channel name and parameters
-                base_name = self.channel.name
+                base_name = pathlib.Path(self.loader.file_path).stem
                 if self.use_range.isChecked():
                     base_name += f"_frames_{self.range_start.value()}-{self.range_stop.value()}"
-                base_name += f"_{self.analysis_type.currentText()}"
+                base_name += f"_Farneback"
                 base_name += f"_{self.unit_select.currentText().replace('/', '_per_')}"
                 
                 # Save flow array as TIFF
@@ -399,6 +316,51 @@ class CellocityGUI(QMainWindow):
             print(f"Save error: {str(e)}")
             import traceback
             traceback.print_exc()
+
+    def updateMetadata(self):
+        """Update metadata display and controls based on loaded file."""
+        if not self.loader:
+            return
+        
+        # Update channel selector with proper names
+        self.channel_select.clear()
+        if self.loader.channel_names:
+            self.channel_select.addItems(self.loader.channel_names)
+        else:
+            self.channel_select.addItems([f"Channel {i}" for i in range(self.loader.n_channels)])
+        
+        # Update slice selector visibility and range
+        if self.loader.n_slices > 1:
+            self.slice_select.show()
+            self.slice_label.show()
+            self.slice_select.setMaximum(self.loader.n_slices - 1)
+            self.slice_select.setValue(0)
+        else:
+            self.slice_select.hide()
+            self.slice_label.hide()
+            self.slice_select.setValue(0)
+        
+        # Update frame range
+        self.range_start.setMinimum(0)
+        self.range_start.setMaximum(self.loader.n_frames - 1)
+        self.range_start.setValue(0)
+        
+        self.range_stop.setMinimum(1)
+        self.range_stop.setMaximum(self.loader.n_frames)
+        self.range_stop.setValue(self.loader.n_frames)
+        
+        # Update metadata text
+        metadata_text = [
+            f"File: {self.loader.file_path}",
+            f"Channels: {self.loader.n_channels}",
+            f"Channel Names: {', '.join(self.loader.channel_names) if self.loader.channel_names else 'Not specified'}",
+            f"Frames: {self.loader.n_frames}",
+            f"Slices: {self.loader.n_slices}",
+            f"Frame Interval (ms): {self.loader.intended_frame_interval_ms}",
+            f"Pixel Size (µm): {self.loader.pixel_size_um}"
+        ]
+        
+        self.metadata_label.setText("\n".join(metadata_text))
 
 def main():
     app = QApplication(sys.argv)
