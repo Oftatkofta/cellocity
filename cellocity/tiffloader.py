@@ -23,7 +23,8 @@ class TiffLoader:
         self.n_channels = None
         self.n_frames = None
         self.n_slices = None
-        
+        self.z_interval_um = None
+
         # Load the file
         self._load_file()
         
@@ -38,6 +39,7 @@ class TiffLoader:
             print(f"  Image size: {self.tiff.pages[0].shape}")
             print(f"  Pixel size: {self.pixel_size_um} µm")
             print(f"  Frame interval: {self.intended_frame_interval_ms} ms")
+            print(f"  Z interval: {self.z_interval_um} µm")
 
     def _load_file(self):
         """Load the TIFF file."""
@@ -78,7 +80,8 @@ class TiffLoader:
                 metadata['n_frames'] = int(summary.get('Frames', 1))
                 metadata['n_channels'] = int(summary.get('Channels', 1))
                 metadata['n_slices'] = int(summary.get('Slices', 1))
-                
+                metadata['z-step_um'] = abs(float(summary.get('z-step_um', 1)))
+
                 # Channel names
                 if 'ChNames' in summary:
                     metadata['channel_names'] = summary['ChNames']
@@ -141,7 +144,8 @@ class TiffLoader:
             self.n_channels = metadata.get('n_channels')
             self.n_frames = metadata.get('n_frames')
             self.n_slices = metadata.get('n_slices')
-            
+            self.z_interval_um = metadata.get('z-step_um')
+
             if self.debug:
                 print("\nExtracted metadata:")
                 for key, value in metadata.items():
@@ -211,6 +215,84 @@ class TiffLoader:
                 import traceback
                 traceback.print_exc()
             raise
+    
+    def extract_channel_3d(self, channel_idx):
+        """Extract a specific channel and retain all z-slices, along with its elapsed times.
+        
+        Returns a 4D array with dimensions (T, Z, Y, X) for the specified channel.
+        """
+        try:
+            if self.debug:
+                print(f"\nExtracting 4D stack for channel {channel_idx}")
+            
+            # Initialize lists to store data for each timepoint
+            timepoint_stacks = []
+            elapsed_times = []
+            
+            # Process each timepoint
+            for t in range(self.n_frames):
+                # Initialize list to store all z-slices for this timepoint
+                z_slices = []
+                
+                # Get all z-slices for this timepoint and channel
+                for z in range(self.n_slices):
+                    # Calculate page index: t * (channels * slices) + channel * slices + z
+                    page_idx = t * (self.n_channels * self.n_slices) + channel_idx * self.n_slices + z
+                    
+                    if page_idx < len(self.tiff.pages):
+                        page = self.tiff.pages[page_idx]
+                        z_slices.append(page.asarray())
+                
+                # Only record elapsed time once per timepoint (using first z-slice)
+                first_z_page_idx = t * (self.n_channels * self.n_slices) + channel_idx * self.n_slices
+                
+                if first_z_page_idx < len(self.tiff.pages):
+                    page = self.tiff.pages[first_z_page_idx]
+                    
+                    # Get elapsed time from page's MicroManager metadata
+                    try:
+                        frame_meta = page.tags['MicroManagerMetadata'].value
+                        if 'ElapsedTime-ms' in frame_meta:
+                            elapsed_time = float(frame_meta['ElapsedTime-ms'])
+                            if self.debug and t == 0:
+                                print(f"Found elapsed time in frame metadata: {elapsed_time} ms")
+                        else:
+                            elapsed_time = t * self.intended_frame_interval_ms
+                            if self.debug and t == 0:
+                                print(f"Using calculated elapsed time: {elapsed_time} ms")
+                    except Exception as e:
+                        if self.debug:
+                            print(f"Error getting elapsed time for frame {t}: {e}")
+                        elapsed_time = t * self.intended_frame_interval_ms
+                    
+                    elapsed_times.append(elapsed_time)
+                    
+                    # Stack all z-slices for this timepoint into a 3D array (Z, Y, X)
+                    if z_slices:
+                        timepoint_stack = np.stack(z_slices)
+                        timepoint_stacks.append(timepoint_stack)
+            
+            if self.debug:
+                print(f"Extracted {len(timepoint_stacks)} timepoints with {self.n_slices} z-slices each")
+                if timepoint_stacks:
+                    print(f"Stack shape: {timepoint_stacks[0].shape}")
+                print(f"Elapsed times: {elapsed_times[:5]}...")
+            
+            # Stack all timepoints into a 4D array (T, Z, Y, X)
+            array = np.stack(timepoint_stacks)
+            
+            # Convert elapsed times to numpy array
+            elapsed_times = np.array(elapsed_times)
+            
+            return array, elapsed_times
+            
+        except Exception as e:
+            if self.debug:
+                print(f"Error extracting channel: {e}")
+                import traceback
+                traceback.print_exc()
+            raise
+
 
     def close(self):
         """Close the TIFF file."""
