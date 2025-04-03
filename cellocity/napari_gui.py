@@ -15,9 +15,9 @@ infile = os.path.abspath(r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Cal
 
 file_loader = TiffLoader(infile, debug=True)
 
-dic_channel, elapsed_times = file_loader.extract_channel_3d(0)
-draq7_channel, elapsed_times = file_loader.extract_channel_3d(2)
-
+dic_channel, dic_elapsed_times = file_loader.extract_channel_3d(0)
+#draq7_channel, draq7_elapsed_times = file_loader.extract_channel_3d(2)
+print(dic_channel.shape)
 z_scale = file_loader.z_interval_um/file_loader.pixel_size_um
 
 

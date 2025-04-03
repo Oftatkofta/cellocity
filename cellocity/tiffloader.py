@@ -63,7 +63,7 @@ class TiffLoader:
         if hasattr(self.tiff, 'micromanager_metadata'):
             if self.debug:
                 print("\nFound MicroManager metadata:")
-                print(self.tiff.micromanager_metadata)
+                #print(self.tiff.micromanager_metadata)
             
             mm_metadata = self.tiff.micromanager_metadata
             metadata = {}
@@ -275,7 +275,7 @@ class TiffLoader:
             if self.debug:
                 print(f"Extracted {len(timepoint_stacks)} timepoints with {self.n_slices} z-slices each")
                 if timepoint_stacks:
-                    print(f"Stack shape: {timepoint_stacks[0].shape}")
+                    print(f"Z-Stack shape: {timepoint_stacks[0].shape}")
                 print(f"Elapsed times: {elapsed_times[:5]}...")
             
             # Stack all timepoints into a 4D array (T, Z, Y, X)
