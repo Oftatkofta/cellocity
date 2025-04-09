@@ -18,16 +18,19 @@ def process_channel(infile, outdir, ch_idx = 0):
     analyzer = FarenbackAnalyzer(channel,  "um/min")
     analysis = FlowAnalysis(analyzer)
     analysis.draw_all_flow_frames(scalebarFlag=True, scalebarLength=10, **kwargs)
-    analysis.saveFlowAsTif(os.path.join(outdir, "ch_"+str(ch_idx)+".tif"), **kwargs)
+    analysis.saveFlowAsTif(os.path.join(outdir, "ch_"+str(ch_idx)+"_"), **kwargs)
     speed_analysis = FlowSpeedAnalysis(analyzer)
     speed_analysis.calculateSpeeds()
-    speed_analysis.saveArrayAsTif(outdir)
+    
+    fname = analyzer.channel.name + "ch_"+str(ch_idx)+"_speeds-um_per_min.tif"
+    speed_analysis.saveArrayAsTif(outdir, fname)
     file_loader.close()
     return None
 
 
 if __name__ == "__main__":
-    process_channel(infile, outdir)
+    process_channel(infile, outdir, 0)
+    process_channel(infile, outdir,1)
 
 
 
