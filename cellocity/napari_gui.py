@@ -1,56 +1,102 @@
 import napari
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QFileDialog
 from pathlib import Path
+import numpy as np
 
 from cellocity.channel import Channel
 from cellocity.analysis import FarenbackAnalyzer
 from cellocity.tiffloader import TiffLoader
 
-import numpy as np
 import os
 from magicgui import magicgui
 
-infile = os.path.abspath(r"D:\HujejX1_ODMd1_MSS109_75uM-DRAQ7_start14.01_1_1_MMStack_Pos0.ome.tif")
-#infile = os.path.abspath(r"C:\Users\Jens\Documents\_Microscopy\FrankenScope2\Calibration stuff\6T_5Z_3C_512X_512Y_1\6T_5Z_3C_512X_512Y_1_MMStack_Pos0.ome.tif") 
+# Define a list of distinct colormaps for different Z-slices
+COLORMAPS = ['red', 'green', 'blue', 'magenta', 'cyan', 'yellow', 'gray', 'viridis', 'plasma', 'inferno']
 
-file_loader = TiffLoader(infile, debug=True)
+class CellocityNapariGUI(QWidget):
+    def __init__(self, viewer: napari.Viewer):
+        super().__init__()
+        self.viewer = viewer
+        self.loader = None
+        
+        self.setup_ui()
+        
+    def setup_ui(self):
+        """Setup the minimal GUI elements."""
+        layout = QVBoxLayout()
+        
+        # Just a load button for now
+        self.load_button = QPushButton("Load File")
+        self.load_button.clicked.connect(self.load_file)
+        layout.addWidget(self.load_button)
+        
+        self.setLayout(layout)
+        
+    def load_file(self):
+        """Load a TIFF file and analyze all Z-slices."""
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open TIFF File",
+            "",
+            "TIFF Files (*.tif *.tiff);;All Files (*)"
+        )
+        if filename:
+            try:
+                # Load the file
+                self.loader = TiffLoader(filename)
+                
+                # For each Z-slice
+                for z in range(self.loader.n_slices):
+                    # Get the first channel for this Z-slice
+                    channel = Channel(self.loader, channel_idx=0, slice_idx=z)
+                    array = channel.getArray()
+                    
+                    # Add raw data to viewer
+                    self.viewer.add_image(
+                        array,
+                        name=f"Z{z}_Raw",
+                        scale=[1, self.loader.pixel_size_um, self.loader.pixel_size_um]
+                    )
+                    
+                    # Do Farneback analysis
+                    analyzer = FarenbackAnalyzer(channel, unit="um/s")
+                    flows = analyzer._getFlows()
+                    
+                    # Add U and V components to viewer with color coding
+                    u = flows[..., 0]  # U component
+                    v = flows[..., 1]  # V component
+                    
+                    # Use a different colormap for each Z-slice
+                    colormap = COLORMAPS[z % len(COLORMAPS)]
+                    
+                    self.viewer.add_image(
+                        u,
+                        name=f"Z{z}_U",
+                        colormap=colormap,
+                        scale=[1, self.loader.pixel_size_um, self.loader.pixel_size_um]
+                    )
+                    self.viewer.add_image(
+                        v,
+                        name=f"Z{z}_V",
+                        colormap=colormap,
+                        scale=[1, self.loader.pixel_size_um, self.loader.pixel_size_um]
+                    )
+                    
+            except Exception as e:
+                print(f"Error loading file: {str(e)}")
 
-dic_array, dic_elapsed_times = file_loader.extract_channel_3d(0)
-draq7_array, draq7_elapsed_times = file_loader.extract_channel_3d(2)
+def main():
+    # Create napari viewer with 3D display
+    viewer = napari.Viewer(ndisplay=3)
+    
+    # Create and add our widget
+    widget = CellocityNapariGUI(viewer)
+    viewer.window.add_dock_widget(widget, name="Cellocity")
+    
+    # Start napari
+    napari.run()
 
-print(dic_array.shape, draq7_array.shape)
-z_scale = file_loader.z_interval_um/file_loader.pixel_size_um
-
-
-viewer = napari.Viewer(ndisplay=3, axis_labels=("z", "t"))
-dic_layer = viewer.add_image(dic_array, name="DIC", colormap="gray", blending="translucent", scale=[1, z_scale, 1, 1])
-#viewer.add_image(data[:,:,1,:,:], name="GFP", colormap="green", blending="translucent", scale=[1, z_scale, 1, 1])
-draq7_layer = viewer.add_image(draq7_array, name="DRAQ7", colormap="magenta", blending="translucent", scale=[1, z_scale, 1, 1])
-# Add channel 1 as 2D image with custom Z control
-# Start with z = 0
-initial_z = 0
-# Extract the initial Z slice with singleton Z-dim: shape (T, 1, Y, X)
-dic_slice_data = dic_array[:, initial_z:initial_z+1, :, :]
-
-# Add the DIC slice layer at its Z position using `translate`
-dic_slice = viewer.add_image(
-    dic_slice_data,
-    name='DIC (Single Slice)',
-    colormap='gray',
-    scale=[1, z_scale, 1, 1],  # time, z, y, x
-    translate=[0, initial_z * z_scale, 0, 0],
-    blending='translucent',
-)
-# Z slider to update the slice and its position
-@magicgui(z={"label": "DIC Z index", "max": dic_array.shape[1] - 1}, auto_call=True)
-def update_z(z: int = 0):
-    new_data = dic_array[:, z:z+1, :, :]
-    dic_slice.data = new_data
-    dic_slice.translate = [0, z * z_scale, 0, 0]
-
-viewer.window.add_dock_widget(update_z, area='right')
-
-napari.run()
-file_loader.close()
+if __name__ == "__main__":
+    main()
 
 

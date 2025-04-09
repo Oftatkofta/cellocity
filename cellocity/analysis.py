@@ -164,7 +164,7 @@ class FlowAnalyzer(Analyzer):
             raise ValueError("No flow data to save")
             
         # Ensure parent directory exists
-        filepath.parent.mkdir(parents=True, exist_ok=True)
+        #filepath.parent.mkdir(parents=True, exist_ok=True)
         
         # Save as TIFF
         with tifffile.TiffWriter(str(filepath)) as tif:
@@ -542,7 +542,7 @@ class FlowAnalysis(Analysis):
         shape = self.drawnFrames.shape
         self.drawnFrames.shape = (shape[0], 1, 1, shape[1], shape[2], 1)
     
-    def saveFlowAsTif(self, outpath):
+    def saveFlowAsTif(self, outpath, **kwargs):
         """
         Saves the drawn frames as an imageJ compatible tif with rudimentary metadata.
     
@@ -557,14 +557,14 @@ class FlowAnalysis(Analysis):
             suffix = "_PIV.tif"
     
         fname = self.getChannelName()+suffix
-        savename = outpath / fname
+        savename = outpath + fname
     
         self._rehapeDrawnFramesTo6d()
         arr_to_save = self.drawnFrames
     
         print("Saving flow...")
     
-        finterval_s = self.analyzer.channel.finterval_ms / 1000
+        finterval_s = self.analyzer.channel.frame_interval_ms / 1000
         ij_metadatasave = {'unit': 'um', 'finterval': finterval_s,
                            'tunit': 's', 'Info': "None",
                            'frames': self.analyzer.flows.shape[0],
@@ -773,14 +773,14 @@ class FlowSpeedAnalysis(FlowAnalysis):
             fname = self.analyzer.channel.name + "_speeds-"+unit+".tif"
 
 
-        saveme = outdir / fname
+        saveme = os.path.join(outdir, fname)
     
-        ij_metadatasave = {'unit': 'um', 'finterval': round(self.analyzer.channel.finterval_ms / 1000, 2),
+        ij_metadatasave = {'unit': 'um', 'finterval': round(self.analyzer.channel.frame_interval_ms / 1000, 2),
                            'tunit': "s", 'frames': self.speeds.shape[0],
                            'slices': 1, 'channels': 1}
     
-        tifffile.imwrite(file=saveme,
-                         data=self.speeds.astype(np.float32),
+        tifffile.imwrite(saveme,
+                         self.speeds.astype(np.float32),
                          imagej=True,
                          resolution=(1 / self.analyzer.channel.pxSize_um, 1 / self.analyzer.channel.pxSize_um),
                          metadata=ij_metadatasave)

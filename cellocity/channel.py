@@ -13,7 +13,7 @@ import json
 class Channel:
     """Class representing a single channel of data."""
     
-    def __init__(self, channel_idx, tiff_loader, slice_idx=0, debug=True):
+    def __init__(self, channel_idx, tiff_loader, slice_idx=0, debug=False):
         """Initialize Channel object."""
         self.channel_idx = channel_idx
         self.tiff_loader = tiff_loader
