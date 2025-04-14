@@ -2,7 +2,6 @@
 
 import numpy as np
 from pathlib import Path
-import json
 import xml.etree.ElementTree as ET
 import tifffile
 
@@ -29,6 +28,7 @@ class TiffLoader:
         self._load_file()
         
         # Extract metadata
+        
         self.metadata = self._extract_metadata()
         
         if self.debug:
@@ -48,6 +48,53 @@ class TiffLoader:
         except Exception as e:
             raise IOError(f"Failed to load TIFF file: {e}")
 
+    def _determine_pixel_size(self):
+        # Get the first page
+        page = self.tiff.pages[0]
+        
+        # Try to get pixel size from different sources
+        pixel_size = None
+        
+        # 1. Try MicroManager metadata first
+        try:
+            mm_data = page.tags['MicroManagerMetadata'].value
+            
+            if 'PixelSize_um' in mm_data:
+                pixel_size = float(mm_data['PixelSize_um'])
+            elif 'PixelSizeUm' in mm_data:
+                pixel_size = float(mm_data['PixelSizeUm'])
+        except Exception as e:
+            print(f"Error getting pixel size from MicroManager metadata: {e}")
+        # 2. Try OME metadata if MicroManager didn't have it
+        try:
+            ome = self.tiff.ome_metadata
+            if ome:
+                # Parse XML string
+                root = ET.fromstring(ome)
+                # Find Pixels element
+                pixels = root.find('.//{http://www.openmicroscopy.org/Schemas/OME/2016-06}Pixels')
+                if pixels is not None:
+                    # Try PhysicalSizeX first
+                    size_x = pixels.get('PhysicalSizeX')
+                    if size_x:
+                        pixel_size = float(size_x)
+        except Exception as e:
+            print(f"Error getting pixel size from OME metadata: {e}")
+        # 3. Try TIFF resolution tags as last resort
+        if pixel_size is None and hasattr(page, 'tags'):
+            try:
+                x_res = page.tags['XResolution'].value
+                if x_res[1] != 0:  # Avoid division by zero
+                    # Convert from resolution to size in micrometers
+                    pixel_size = (x_res[1] / x_res[0]) # assuming resolution is in pixels/um
+            except (KeyError, AttributeError):
+                pass
+
+
+        print(f"\nPixel size found: {pixel_size} µm")
+        return pixel_size
+    
+
     def _extract_metadata(self):
         """Extract metadata from the TIFF file."""
         if self.debug:
@@ -60,10 +107,10 @@ class TiffLoader:
                     print(f"Series {i} axes: {series.axes}")
 
         # Get MicroManager metadata using tifffile's built-in handling
-        if hasattr(self.tiff, 'micromanager_metadata'):
+        if type(self.tiff.micromanager_metadata) == dict:
             if self.debug:
                 print("\nFound MicroManager metadata:")
-                #print(self.tiff.micromanager_metadata)
+                print(self.tiff.micromanager_metadata)
             
             mm_metadata = self.tiff.micromanager_metadata
             metadata = {}
@@ -94,52 +141,12 @@ class TiffLoader:
                             break
                     
             
-            # Get the first page
-            page = self.tiff.pages[0]
-            
-            # Try to get pixel size from different sources
-            pixel_size = None
-            
-            # 1. Try MicroManager metadata first
-            if hasattr(page, 'description'):
-                mm_data = page.tags['MicroManagerMetadata'].value
-                
-                if 'PixelSize_um' in mm_data:
-                    pixel_size = float(mm_data['PixelSize_um'])
-                elif 'PixelSizeUm' in mm_data:
-                    pixel_size = float(mm_data['PixelSizeUm'])
-            
-            # 2. Try OME metadata if MicroManager didn't have it
-            if pixel_size is None and hasattr(self.tiff, 'ome_metadata'):
-                ome = self.tiff.ome_metadata
-                if ome:
-                    # Parse XML string
-                    root = ET.fromstring(ome)
-                    # Find Pixels element
-                    pixels = root.find('.//{http://www.openmicroscopy.org/Schemas/OME/2016-06}Pixels')
-                    if pixels is not None:
-                        # Try PhysicalSizeX first
-                        size_x = pixels.get('PhysicalSizeX')
-                        if size_x:
-                            pixel_size = float(size_x)
-            
-            # 3. Try TIFF resolution tags as last resort
-            if pixel_size is None and hasattr(page, 'tags'):
-                try:
-                    x_res = page.tags['XResolution'].value
-                    if x_res[1] != 0:  # Avoid division by zero
-                        # Convert from resolution to size in micrometers
-                        pixel_size = (x_res[1] / x_res[0]) * 1e-3  # assuming resolution is in pixels/mm
-                except (KeyError, AttributeError):
-                    pass
-            metadata['pixel_size_um'] = pixel_size
 
-            print(f"\nPixel size found: {pixel_size} µm")
             
 
             # Update instance attributes
             self.intended_frame_interval_ms = metadata.get('frame_interval_ms')
-            self.pixel_size_um = metadata.get('pixel_size_um')
+            self.pixel_size_um = self._determine_pixel_size()
             self.channel_names = metadata.get('channel_names')
             self.n_channels = metadata.get('n_channels')
             self.n_frames = metadata.get('n_frames')
@@ -152,7 +159,18 @@ class TiffLoader:
                     print(f"  {key}: {value}")
             
             return metadata
-            
+
+
+        if self.tiff.imagej_metadata:
+            metadata = self.tiff.imagej_metadata
+            self.intended_frame_interval_ms = metadata.get('finterval')*1000
+            self.pixel_size_um = self._determine_pixel_size()
+            self.channel_names = None
+            self.n_channels = metadata.get('channels')
+            self.n_frames = metadata.get('frames')
+            self.n_slices = metadata.get('slices')
+            self.z_interval_um = metadata.get('spacing')
+        
         return None
 
     def extract_channel(self, channel_idx, slice_idx=0):
